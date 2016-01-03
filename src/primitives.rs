@@ -1,11 +1,10 @@
 use std::option::Option;
 
 pub struct Semaphore {
-    permitions: usize
+    permitions: usize,
 }
 
 impl Semaphore {
-    
     pub fn new(permitions: usize) -> Semaphore {
         Semaphore { permitions: permitions }
     }
@@ -15,6 +14,12 @@ impl Semaphore {
     }
 
     pub fn try_acquire(&mut self) -> Option<usize> {
-        None
+        if self.permitions > 0 {
+            let res = self.permitions;
+            self.permitions -= 1;
+            Some(res)
+        } else {
+            None
+        }
     }
 }

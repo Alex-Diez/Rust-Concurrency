@@ -13,6 +13,21 @@ mod semaphore_prim {
     }
 
     #[test]
+    fn it_should_acquired_more_than_semaphore_contains() {
+        let mut s = Semaphore::new(3);
+
+        let res1 = s.try_acquire();
+        let res2 = s.try_acquire();
+        let res3 = s.try_acquire();
+        let res4 = s.try_acquire();
+
+        assert_eq!(res1, Some(3));
+        assert_eq!(res2, Some(2));
+        assert_eq!(res3, Some(1));
+        assert_eq!(res4, None);
+    }
+
+    #[test]
     fn thread_should_try_to_acquire_resource() {
         let mut s = Semaphore::new(1);
 
