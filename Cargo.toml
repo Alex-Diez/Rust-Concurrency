@@ -1,12 +1,16 @@
 [package]
-name = "rust-concurrent"
-version = "0.0.1-SNAPSHOT"
-authors = ["Alex-Diez <alexvic.amatory@gmail.com>"]
-readme        = "README.md"
-exclude       = [
+name        = "rust-concurrent"
+version     = "0.0.1-SNAPSHOT"
+authors     = ["Alex-Diez <alexvic.amatory@gmail.com>"]
+readme      = "README.md"
+exclude     = [
   ".gitignore",
   "test/**/*",
 ]
+
+[lib]
+name = "concurrent"
+path = "src/lib.rs"
 
 [[test]]
 name = "test"
