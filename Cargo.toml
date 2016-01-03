@@ -1,0 +1,13 @@
+[package]
+name = "rust-concurrent"
+version = "0.0.1-SNAPSHOT"
+authors = ["Alex-Diez <alexvic.amatory@gmail.com>"]
+readme        = "README.md"
+exclude       = [
+  ".gitignore",
+  "test/**/*",
+]
+
+[[test]]
+name = "test"
+path = "test/mod.rs"
