@@ -13,7 +13,7 @@ mod semaphore_prim {
     }
 
     #[test]
-    fn it_should_acquired_more_than_semaphore_contains() {
+    fn it_should_not_acquired_more_than_semaphore_contains_with_try_acquire() {
         let mut s = Semaphore::new(3);
 
         let res1 = s.try_acquire();
@@ -39,5 +39,28 @@ mod semaphore_prim {
             }
         );
         assert_eq!(res, Some(1));
+    }
+
+    #[test]
+    fn it_should_acquire_each_time_new_resource() {
+        let mut s = Semaphore::new(3);
+
+        let res3 = s.acquire();
+        let res2 = s.acquire();
+
+        assert_eq!(res3, Some(3));
+        assert_eq!(res2, Some(2));
+    }
+
+    #[test]
+    fn acquire_released_resource() {
+        let mut s = Semaphore::new(3);
+
+        let res = s.acquire();
+        assert_eq!(res, Some(3));
+        s.release();
+
+        let reacquired_res = s.acquire();
+        assert_eq!(reacquired_res, Some(3));
     }
 }
