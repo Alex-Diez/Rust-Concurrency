@@ -63,4 +63,7 @@ mod semaphore_prim {
         let reacquired_res = s.acquire();
         assert_eq!(reacquired_res, Some(3));
     }
+
+    //find a way how to prevent use resource when thread release it
+    //test for locking thread on acquire method if there is no free resources semaphore has
 }
