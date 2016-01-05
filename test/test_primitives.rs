@@ -76,6 +76,31 @@ mod semaphore_prim {
         assert_eq!(res_val, Some(10));
     }
 
+    #[test]
+    fn acquire_update_released_multiple_resources() {
+        let mut s = Semaphore::new(3);
+        let res_index3 = s.acquire();
+        let res_index2 = s.acquire();
+        let res_index1 = s.acquire();
+
+        s.update(res_index3.unwrap(), 10);
+        s.update(res_index2.unwrap(), 20);
+        s.update(res_index1.unwrap(), 30);
+
+        s.release();
+        s.release();
+        s.release();
+
+
+        let res_index3 = s.acquire();
+        let res_index2 = s.acquire();
+        let res_index1 = s.acquire();
+
+        assert_eq!(s.get(res_index3.unwrap()), Some(10));
+        assert_eq!(s.get(res_index2.unwrap()), Some(20));
+        assert_eq!(s.get(res_index1.unwrap()), Some(30));
+    }
+
     //find a way how to prevent use resource when thread release it
     //test for locking thread on acquire method if there is no free resources semaphore has
 }

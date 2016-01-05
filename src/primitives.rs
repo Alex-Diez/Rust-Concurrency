@@ -1,13 +1,18 @@
 use std::option::Option;
+use std::collections::HashMap;
 
 pub struct Semaphore {
-    resource: usize,
+    resources: HashMap<usize, usize>,
     current_permissions: usize,
 }
 
 impl Semaphore {
     pub fn new(permissions: usize) -> Semaphore {
-        Semaphore { resource: 0, current_permissions: permissions }
+        let mut resources = HashMap::with_capacity(permissions);
+        for i in (1..permissions+1) {
+            resources.insert(i, 0);
+        }
+        Semaphore { resources: resources, current_permissions: permissions }
     }
 
     pub fn acquire(&mut self) -> Option<usize> {
@@ -23,11 +28,12 @@ impl Semaphore {
     }
 
     pub fn update(&mut self, index: usize, val: usize) {
-        self.resource = val;
+       let res_val = self.resources.get_mut(&index);
+       *(res_val.unwrap()) = val;
     }
 
     pub fn get(&self, index: usize) -> Option<usize> {
-        Some(self.resource)
+        self.resources.get(&index).map(|v| *v)
     }
 
     fn acuqire_resource(&mut self) -> Option<usize> {
