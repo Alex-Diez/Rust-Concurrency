@@ -101,6 +101,18 @@ mod semaphore_prim {
         assert_eq!(s.get(res_index1.unwrap()), Some(30));
     }
 
+    #[test]
+    fn it_should_not_modify_semaphore_resource_when_modify_local_value_only() {
+        let mut s = Semaphore::new(1);
+        let index = s.acquire();
+
+        let res = s.get(index.unwrap());
+        let res = res.map(|v| v + 10);
+
+        assert_eq!(res, Some(10));
+        assert_eq!(s.get(index.unwrap()), Some(0));
+    }
+
     //find a way how to prevent use resource when thread release it
     //test for locking thread on acquire method if there is no free resources semaphore has
 }
