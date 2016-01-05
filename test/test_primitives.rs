@@ -8,11 +8,6 @@ mod semaphore_prim {
     use std::thread;
 
     #[test]
-    fn it_should_create_semaphore() {
-        Semaphore::new(1);
-    }
-
-    #[test]
     fn it_should_not_acquired_more_than_semaphore_contains_with_try_acquire() {
         let mut s = Semaphore::new(3);
 
@@ -62,6 +57,23 @@ mod semaphore_prim {
 
         let reacquired_res = s.acquire();
         assert_eq!(reacquired_res, Some(3));
+    }
+
+    #[test]
+    fn acquire_update_release_acquire_resource_with_new_value() {
+        let mut s = Semaphore::new(1);
+        let res_index = s.acquire();
+        let res_val = s.get(res_index.unwrap());
+
+        assert_eq!(res_val, Some(0));
+
+        s.update(res_index.unwrap(), 10);
+        s.release();
+
+        let res_index = s.acquire();
+        let res_val = s.get(res_index.unwrap());
+
+        assert_eq!(res_val, Some(10));
     }
 
     //find a way how to prevent use resource when thread release it
