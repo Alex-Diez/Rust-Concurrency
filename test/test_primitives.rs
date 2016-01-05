@@ -63,17 +63,18 @@ mod semaphore_prim {
     fn acquire_update_release_acquire_resource_with_new_value() {
         let mut s = Semaphore::new(1);
         let res_index = s.acquire();
-        let res_val = s.get(res_index.unwrap());
 
-        assert_eq!(res_val, Some(0));
-
-        s.update(res_index.unwrap(), 10);
-        s.release();
+        update_and_released(&mut s, 10, res_index.unwrap());
 
         let res_index = s.acquire();
         let res_val = s.get(res_index.unwrap());
 
         assert_eq!(res_val, Some(10));
+    }
+
+    fn update_and_released(semaphore: &mut Semaphore, update_to: usize, index: usize) {
+        semaphore.update(index, update_to);
+        semaphore.release();
     }
 
     #[test]
@@ -83,14 +84,9 @@ mod semaphore_prim {
         let res_index2 = s.acquire();
         let res_index1 = s.acquire();
 
-        s.update(res_index3.unwrap(), 10);
-        s.update(res_index2.unwrap(), 20);
-        s.update(res_index1.unwrap(), 30);
-
-        s.release();
-        s.release();
-        s.release();
-
+        update_and_released(&mut s, 10, res_index3.unwrap());
+        update_and_released(&mut s, 20, res_index2.unwrap());
+        update_and_released(&mut s, 30, res_index1.unwrap());
 
         let res_index3 = s.acquire();
         let res_index2 = s.acquire();

@@ -9,7 +9,7 @@ pub struct Semaphore {
 impl Semaphore {
     pub fn new(permissions: usize) -> Semaphore {
         let mut resources = HashMap::with_capacity(permissions);
-        for i in (1..permissions+1) {
+        for i in (1..permissions + 1) {
             resources.insert(i, 0);
         }
         Semaphore { resources: resources, current_permissions: permissions }
