@@ -109,6 +109,10 @@ mod semaphore_prim {
         assert_eq!(s.get(index.unwrap()), Some(0));
     }
 
-    //find a way how to prevent use resource when thread release it
-    //test for locking thread on acquire method if there is no free resources semaphore has
+    //todo
+    //1. test when two thread modify different resources
+    //2. find a way how to prevent use resource when thread release it
+    //3. test for locking thread on acquire method if there is no free resources
+    // optinal / specific functionality
+    //4. acquire resourse which was released previously by the thread
 }
