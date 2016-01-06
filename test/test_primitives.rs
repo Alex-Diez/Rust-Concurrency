@@ -5,16 +5,50 @@ mod count_down_latch_prim {
 
     use super::concurrent::primitives::CountDownLatch;
 
+    use std::thread;
+    use std::sync::{Arc, Mutex};
+    use std::time::Duration;
+    use std::sync::mpsc::{channel, TryRecvError};
+
     #[test]
     fn it_should_decrease_counts_when_latch_count_down() {
         let mut latch = CountDownLatch::new(1);
         let counts = latch.get_counts();
         latch.count_down();
 
-        assert_eq!(latch.get_counts(), counts-1);
+        assert_eq!(latch.get_counts(), counts - 1);
     }
 
-    
+    #[test]
+    fn thread_should_await_until_counts_not_equals_zero() {
+        let mut arc = Arc::new(CountDownLatch::new(1));
+        let (tx, rx) = channel();
+
+        let count_down_latch = arc.clone();
+        let txc = tx.clone();
+        let t = thread::spawn(
+            move || {
+                assert_eq!(count_down_latch.get_counts(), 1);
+                
+                txc.send(count_down_latch.await());
+
+                assert_eq!(count_down_latch.get_counts(), 0);
+            }
+        );
+
+        assert!(match rx.try_recv() {
+            Err(TryRecvError::Empty) => true,
+            _ => false,
+        });
+
+        match Arc::get_mut(&mut arc) {
+            Some(latch) => latch.count_down(),
+            None => {panic!("WTF");}
+        }
+
+        let res = t.join();
+        assert!(res.is_ok());
+    }
 }
 
 #[cfg(test)]

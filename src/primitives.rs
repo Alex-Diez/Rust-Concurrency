@@ -1,19 +1,23 @@
 use std::option::Option;
 use std::collections::HashMap;
+use std::sync::{Condvar, Mutex};
 
 pub struct CountDownLatch {
-    counts: usize
+    counts: usize,
+    //sync: Mutex,
+    condition: Condvar
 }
 
 impl CountDownLatch {
     
     pub fn new(counts: usize) -> CountDownLatch {
-        CountDownLatch { counts: counts }
+        CountDownLatch { counts: counts, condition: Condvar::new() }
     }
 
-    //pub fn await() {
-
-    //}
+    pub fn await(&self) {
+        //while self.counts > 0 {
+        //}
+    }
 
     pub fn count_down(&mut self) {
         self.counts -= 1;
