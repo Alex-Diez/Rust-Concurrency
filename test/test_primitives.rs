@@ -1,6 +1,23 @@
 extern crate concurrent;
 
 #[cfg(test)]
+mod count_down_latch_prim {
+
+    use super::concurrent::primitives::CountDownLatch;
+
+    #[test]
+    fn it_should_decrease_counts_when_latch_count_down() {
+        let mut latch = CountDownLatch::new(1);
+        let counts = latch.get_counts();
+        latch.count_down();
+
+        assert_eq!(latch.get_counts(), counts-1);
+    }
+
+    
+}
+
+#[cfg(test)]
 mod semaphore_prim {
 
     use super::concurrent::primitives::ResourceHolderSemaphore;

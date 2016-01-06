@@ -1,6 +1,29 @@
 use std::option::Option;
 use std::collections::HashMap;
 
+pub struct CountDownLatch {
+    counts: usize
+}
+
+impl CountDownLatch {
+    
+    pub fn new(counts: usize) -> CountDownLatch {
+        CountDownLatch { counts: counts }
+    }
+
+    //pub fn await() {
+
+    //}
+
+    pub fn count_down(&mut self) {
+        self.counts -= 1;
+    }
+
+    pub fn get_counts(&self) -> usize {
+        self.counts
+    }
+}
+
 pub struct ResourceHolderSemaphore {
     resources: HashMap<usize, usize>,
     current_permissions: usize,
