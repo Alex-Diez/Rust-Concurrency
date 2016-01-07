@@ -3,28 +3,44 @@ use std::collections::HashMap;
 use std::sync::{Condvar, Mutex};
 
 pub struct CountDownLatch {
-    counts: usize,
-    //sync: Mutex,
+    sync: Mutex<LatchStatus>,
     condition: Condvar
+}
+
+struct LatchStatus {
+    counts: usize
+}
+
+impl LatchStatus {
+
+    pub fn new(counts: usize) -> LatchStatus {
+        LatchStatus { counts: counts }
+    }
 }
 
 impl CountDownLatch {
     
     pub fn new(counts: usize) -> CountDownLatch {
-        CountDownLatch { counts: counts, condition: Condvar::new() }
+        CountDownLatch { sync: Mutex::new(LatchStatus::new(counts)), condition: Condvar::new() }
     }
 
     pub fn await(&self) {
-        //while self.counts > 0 {
-        //}
+        let mut guard = self.sync.lock().unwrap();
+        if guard.counts > 0 {
+            guard = self.condition.wait(guard).unwrap();
+        }
     }
 
-    pub fn count_down(&mut self) {
-        self.counts -= 1;
+    pub fn count_down(&self) {
+        let mut guard = self.sync.lock().unwrap();
+        guard.counts -= 1;
+        if guard.counts == 0 {
+            self.condition.notify_all();
+        }
     }
 
     pub fn get_counts(&self) -> usize {
-        self.counts
+        self.sync.lock().unwrap().counts
     }
 }
 
