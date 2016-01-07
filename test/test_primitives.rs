@@ -49,3 +49,28 @@ mod count_down_latch_prim {
         }
     }
 }
+
+#[cfg(test)]
+mod semaphore_prim {
+
+    use super::concurrent::primitives::Semaphore;
+
+    #[test]
+    fn it_should_create_a_semaphore() {
+        Semaphore::new(10);
+    }
+
+    #[test]
+    fn it_should_release_resource_automaticaly() {
+        let mut semaphore = Semaphore::new(1);
+
+        {
+            let guard = semaphore.acquire();
+            let try_acquire = semaphore.try_acquire();
+            assert!(try_acquire.is_none());
+        }
+
+        let try_acquire = semaphore.try_acquire();
+        assert!(try_acquire.is_some());
+    }
+}
