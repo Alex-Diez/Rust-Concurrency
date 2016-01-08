@@ -66,13 +66,14 @@ impl <'owner> Drop for SemaphoreGuard<'owner> {
 }
 
 struct SemaphoreState {
-    permissions: usize
+    permissions: usize,
+    max_permissions: usize
 }
 
 impl SemaphoreState {
 
     fn new(permissions: usize) -> SemaphoreState {
-        SemaphoreState { permissions: permissions }
+        SemaphoreState { permissions: permissions, max_permissions: permissions }
     }
 }
 
@@ -107,6 +108,8 @@ impl Semaphore {
 
     pub fn release(&self) {
         let mut lock = self.sync.lock().unwrap();
-        lock.permissions += 1;
+        if lock.permissions < lock.max_permissions {
+            lock.permissions += 1;
+        }
     }
 }

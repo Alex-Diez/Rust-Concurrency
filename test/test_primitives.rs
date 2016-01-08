@@ -73,4 +73,16 @@ mod semaphore_prim {
         let try_acquire = semaphore.try_acquire();
         assert!(try_acquire.is_some());
     }
+
+    #[test]
+    fn it_should_not_release_more_than_permissions() {
+        let mut semaphore = Semaphore::new(1);
+
+        semaphore.release();
+        let try_acquire = semaphore.try_acquire();
+        assert!(try_acquire.is_some());
+
+        let try_acquire = semaphore.try_acquire();
+        assert!(try_acquire.is_none());
+    }
 }
