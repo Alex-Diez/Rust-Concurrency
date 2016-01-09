@@ -55,6 +55,11 @@ mod semaphore_prim {
 
     use super::concurrent::primitives::Semaphore;
 
+    use std::sync::mpsc::{channel, TryRecvError};
+    use std::thread;
+    use std::sync::Arc;
+    use std::time::Duration;
+
     #[test]
     fn it_should_create_a_semaphore() {
         Semaphore::new(10);
@@ -62,12 +67,13 @@ mod semaphore_prim {
 
     #[test]
     fn it_should_release_resource_automaticaly() {
-        let mut semaphore = Semaphore::new(1);
+        let semaphore = Semaphore::new(1);
 
         {
             let guard = semaphore.acquire();
             let try_acquire = semaphore.try_acquire();
             assert!(try_acquire.is_none());
+            drop(guard);
         }
 
         let try_acquire = semaphore.try_acquire();
@@ -76,7 +82,7 @@ mod semaphore_prim {
 
     #[test]
     fn it_should_not_release_more_than_permissions() {
-        let mut semaphore = Semaphore::new(1);
+        let semaphore = Semaphore::new(1);
 
         semaphore.release();
         let try_acquire = semaphore.try_acquire();
@@ -84,5 +90,44 @@ mod semaphore_prim {
 
         let try_acquire = semaphore.try_acquire();
         assert!(try_acquire.is_none());
+    }
+
+    #[test]
+    #[ignore]
+    fn it_should_block_thread_until_resource_will_be_released() {
+        const NUMBER_OF_THREADS: usize = 1;
+        let semaphore = Arc::new(Semaphore::new(1));
+
+        semaphore.acquire();
+
+        let (tx, rx) = channel();
+        for _ in 0..NUMBER_OF_THREADS {
+            let tx = tx.clone();
+            let arc = semaphore.clone();
+            thread::spawn(
+                move || {
+                    let g = arc.acquire();
+                    tx.send(g).unwrap();
+                    //drop(g);
+                }
+            );
+        }
+
+        for _ in 0..NUMBER_OF_THREADS {
+            assert!(match rx.try_recv() {
+                Err(TryRecvError::Empty) => true,
+                _ => false,
+            });
+        }
+
+        semaphore.release();
+
+        thread::sleep(Duration::from_millis(10));
+
+        for _ in 0..NUMBER_OF_THREADS {
+            let res = rx.try_recv();
+            assert!(res.is_ok());
+            thread::sleep(Duration::from_millis(10));
+        }
     }
 }
