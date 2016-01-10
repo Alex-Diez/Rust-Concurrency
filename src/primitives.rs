@@ -93,9 +93,9 @@ impl Semaphore {
 
     pub fn acquire(&self) -> SemaphoreGuard {
         let mut lock = self.sync.lock().unwrap();
-        //while lock.permissions < 1 {
-          //  lock = self.condition.wait(lock).unwrap();
-        //}
+        while lock.permissions < 1 {
+            lock = self.condition.wait(lock).unwrap();
+        }
         lock.permissions -= 1;
         SemaphoreGuard::new(self)
     }
@@ -117,11 +117,7 @@ impl Semaphore {
         let mut lock = self.sync.lock().unwrap();
         if lock.permissions < lock.max_permissions {
             lock.permissions += 1;
-            //self.condition.notify_all();
+            self.condition.notify_all();
         }
-    }
-
-    pub fn permissions(&self) -> isize {
-        self.sync.lock().unwrap().permissions as isize
     }
 }

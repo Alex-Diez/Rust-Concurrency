@@ -55,7 +55,6 @@ mod semaphore_prim {
 
     use super::concurrent::primitives::Semaphore;
 
-    use std::sync::mpsc::{channel, TryRecvError};
     use std::thread;
     use std::sync::Arc;
     use std::time::Duration;
@@ -93,7 +92,6 @@ mod semaphore_prim {
     }
 
     #[test]
-    //TODO break the test
     fn it_should_block_thread_until_resource_will_be_released() {
         const NUMBER_OF_THREADS: usize = 10;
         let arc = Arc::new(Semaphore::new(1));
@@ -105,10 +103,9 @@ mod semaphore_prim {
             let semaphore = arc.clone();
             let jh = thread::spawn(
                 move || {
-                    assert!(semaphore.permissions() > -1);
-                    semaphore.acquire();
+                    let g = semaphore.acquire();
                     thread::sleep(Duration::from_millis(50));
-                    assert!(semaphore.permissions() > -1);
+                    drop(g);
                 }
             );
             results.push(jh);
