@@ -1,9 +1,6 @@
 use std::sync::{Condvar, Mutex};
-//use std::sync::{LockResult, TryLockResult};
-//use std::sync::{TryLockError, PoisonError};
 use std::ops::Drop;
 use std::option::Option;
-use std::marker::PhantomData;
 
 struct LatchStatus {
     counts: usize
@@ -29,7 +26,7 @@ impl CountDownLatch {
 
     pub fn await(&self) {
         let mut guard = self.sync.lock().unwrap();
-        if guard.counts > 0 {
+        while guard.counts > 0 {
             guard = self.condition.wait(guard).unwrap();
         }
     }
@@ -73,28 +70,38 @@ struct SemaphoreState {
 impl SemaphoreState {
 
     fn new(permissions: usize) -> SemaphoreState {
-        SemaphoreState { permissions: permissions, max_permissions: permissions }
+        SemaphoreState {
+            permissions: permissions,
+            max_permissions: permissions
+        }
     }
 }
 
 pub struct Semaphore {
-    sync: Mutex<SemaphoreState>
+    sync: Mutex<SemaphoreState>,
+    condition: Condvar
 }
 
 impl Semaphore {
     
     pub fn new(permissions: usize) -> Semaphore {
-        Semaphore { sync: Mutex::new(SemaphoreState::new(permissions)) }
+        Semaphore {
+            sync: Mutex::new(SemaphoreState::new(permissions)),
+            condition: Condvar::new()
+        }
     }
 
     pub fn acquire(&self) -> SemaphoreGuard {
         let mut lock = self.sync.lock().unwrap();
+        //while lock.permissions < 1 {
+          //  lock = self.condition.wait(lock).unwrap();
+        //}
         lock.permissions -= 1;
         SemaphoreGuard::new(self)
     }
 
     pub fn try_acquire(&self) -> Option<SemaphoreGuard> {
-        let mut try_lock = self.sync.try_lock();
+        let try_lock = self.sync.try_lock();
         match try_lock {
             Ok(mut d) => if d.permissions > 0 {
                             d.permissions -= 1;
@@ -110,6 +117,11 @@ impl Semaphore {
         let mut lock = self.sync.lock().unwrap();
         if lock.permissions < lock.max_permissions {
             lock.permissions += 1;
+            //self.condition.notify_all();
         }
+    }
+
+    pub fn permissions(&self) -> isize {
+        self.sync.lock().unwrap().permissions as isize
     }
 }

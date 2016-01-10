@@ -93,41 +93,32 @@ mod semaphore_prim {
     }
 
     #[test]
-    #[ignore]
+    //TODO break the test
     fn it_should_block_thread_until_resource_will_be_released() {
-        const NUMBER_OF_THREADS: usize = 1;
-        let semaphore = Arc::new(Semaphore::new(1));
+        const NUMBER_OF_THREADS: usize = 10;
+        let arc = Arc::new(Semaphore::new(1));
+        let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
 
-        semaphore.acquire();
+        arc.acquire();
 
-        let (tx, rx) = channel();
         for _ in 0..NUMBER_OF_THREADS {
-            let tx = tx.clone();
-            let arc = semaphore.clone();
-            thread::spawn(
+            let semaphore = arc.clone();
+            let jh = thread::spawn(
                 move || {
-                    let g = arc.acquire();
-                    tx.send(g).unwrap();
-                    //drop(g);
+                    assert!(semaphore.permissions() > -1);
+                    semaphore.acquire();
+                    thread::sleep(Duration::from_millis(50));
+                    assert!(semaphore.permissions() > -1);
                 }
             );
+            results.push(jh);
         }
+        thread::sleep(Duration::from_millis(50));
+        arc.release();
 
-        for _ in 0..NUMBER_OF_THREADS {
-            assert!(match rx.try_recv() {
-                Err(TryRecvError::Empty) => true,
-                _ => false,
-            });
-        }
-
-        semaphore.release();
-
-        thread::sleep(Duration::from_millis(10));
-
-        for _ in 0..NUMBER_OF_THREADS {
-            let res = rx.try_recv();
+        for jh in results {
+            let res = jh.join();
             assert!(res.is_ok());
-            thread::sleep(Duration::from_millis(10));
         }
     }
 }
