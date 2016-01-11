@@ -1,20 +1,20 @@
 extern crate concurrent;
 
-#[cfg(test)]
-mod bounded_blocking_queue_test {
+pub use self::concurrent::collections::BoundedBlockingQueue;
 
-    use super::concurrent::collections::BoundedBlockingQueue;
+describe! bounded_blocking_queue_test {
 
-    #[test]
-    fn it_should_create_a_new_empty_queue() {
-        let queue = BoundedBlockingQueue::new(10);
+    before_each {
+        const CAPACITY : usize = 16;
+        let mut queue = BoundedBlockingQueue::new(CAPACITY);
+    }
 
+    it "it should create a new empty queue" {
         assert!(queue.is_empty());
         assert_eq!(queue.size(), 0);
     }
 
-    #[test]
-    fn capacity_should_be_always_power_of_two() {
+    it "should capacity be always highest power of two" {
         let queue = BoundedBlockingQueue::new(6);
         assert_eq!(queue.capacity(), 8);
 
@@ -28,27 +28,21 @@ mod bounded_blocking_queue_test {
         assert_eq!(queue.capacity(), 64);
     }
 
-    #[test]
-    fn it_should_increase_size_when_insert_into_queue() {
-        let mut queue = BoundedBlockingQueue::new(10);
+    it "should increase size when insert into queue" {
         let old_size = queue.size();
         queue.enqueue(1);
 
         assert_eq!(queue.size(), old_size + 1);
     }
 
-    #[test]
-    fn it_should_contains_value_that_was_equeued() {
-        let mut queue = BoundedBlockingQueue::new(10);
+    it "should contains value that was equeued" {
         queue.enqueue(1);
 
         assert!(queue.contains(1));
         assert!(!queue.contains(2));
     }
 
-    #[test]
-    fn it_should_decrise_size_when_remove_from_queue() {
-        let mut queue = BoundedBlockingQueue::new(10);
+    it "should decrise size when remove from queue" {
         queue.enqueue(1);
         let old_size = queue.size();
 
@@ -56,9 +50,7 @@ mod bounded_blocking_queue_test {
         assert_eq!(queue.size(), old_size - 1);
     }
 
-    #[test]
-    fn it_should_dequeue_last_enqueued_value() {
-        let mut queue = BoundedBlockingQueue::new(10);
+    it "should dequeue last enqueued value" {
         queue.enqueue(10);
         queue.enqueue(20);
         queue.enqueue(30);
@@ -68,10 +60,7 @@ mod bounded_blocking_queue_test {
         assert_eq!(queue.dequeue(), 10);
     }
 
-    #[test]
-    fn it_should_not_enqueue_more_than_capacity() {
-        const CAPACITY : usize = 16;
-        let mut queue = BoundedBlockingQueue::new(CAPACITY);
+    it "should not enqueue more than capacity" {
         for i in 0..CAPACITY + 1 {
             queue.enqueue(i as i32);
         }

@@ -1,27 +1,28 @@
 extern crate concurrent;
 
-#[cfg(test)]
-mod count_down_latch_prim {
+pub use self::concurrent::primitives::CountDownLatch;
+pub use self::concurrent::primitives::Semaphore;
 
-    use super::concurrent::primitives::CountDownLatch;
+pub use std::thread;
+pub use std::sync::Arc;
+pub use std::time::Duration;
 
-    use std::thread;
-    use std::sync::Arc;
-    use std::time::Duration;
+describe! count_down_latch_prim {
 
-    #[test]
-    fn it_should_decrease_counts_when_latch_count_down() {
+    before_each {
         let latch = CountDownLatch::new(1);
+    }
+
+    it "should decrease counts when latch count down" {
         let counts = latch.get_counts();
         latch.count_down();
 
         assert_eq!(latch.get_counts(), counts - 1);
     }
 
-    #[test]
-    fn thread_should_await_until_counts_not_equals_zero() {
+    it "should await until counts not equals zero" {
         const NUMBER_OF_THREADS: usize = 10;
-        let arc = Arc::new(CountDownLatch::new(1));
+        let arc = Arc::new(latch);
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
 
         for _ in 0..NUMBER_OF_THREADS {
@@ -50,24 +51,13 @@ mod count_down_latch_prim {
     }
 }
 
-#[cfg(test)]
-mod semaphore_prim {
+describe! semaphore_prim {
 
-    use super::concurrent::primitives::Semaphore;
-
-    use std::thread;
-    use std::sync::Arc;
-    use std::time::Duration;
-
-    #[test]
-    fn it_should_create_a_semaphore() {
-        Semaphore::new(10);
+    before_each {
+        let semaphore = Semaphore::new(1);
     }
 
-    #[test]
-    fn it_should_release_resource_automaticaly() {
-        let semaphore = Semaphore::new(1);
-
+    it "should release resource automaticaly" {
         {
             let guard = semaphore.acquire();
             let try_acquire = semaphore.try_acquire();
@@ -79,10 +69,7 @@ mod semaphore_prim {
         assert!(try_acquire.is_some());
     }
 
-    #[test]
-    fn it_should_not_release_more_than_permissions() {
-        let semaphore = Semaphore::new(1);
-
+    it "should not release more than permissions" {
         semaphore.release();
         let try_acquire = semaphore.try_acquire();
         assert!(try_acquire.is_some());
@@ -91,10 +78,9 @@ mod semaphore_prim {
         assert!(try_acquire.is_none());
     }
 
-    #[test]
-    fn it_should_block_thread_until_resource_will_be_released() {
+    it "should block thread until resource will be released" {
         const NUMBER_OF_THREADS: usize = 10;
-        let arc = Arc::new(Semaphore::new(1));
+        let arc = Arc::new(semaphore);
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
 
         arc.acquire();
