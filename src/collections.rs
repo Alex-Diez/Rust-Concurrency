@@ -43,6 +43,6 @@ impl BoundedBlockingQueue {
     }
 
     pub fn dequeue(&mut self) -> i32 {
-        self.data.pop().unwrap()
+        self.data.remove(0)
     }
 }
