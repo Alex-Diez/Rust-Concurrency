@@ -33,6 +33,9 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
     }
 
     pub fn size(&self) -> usize {
+        println!("head - {:?}", self.head);
+        println!("tail - {:?}", self.tail);
+        println!("=======================");
         if self.head < self.tail {
             (self.head + self.tail) & (self.data.cap() - 1)
         } else {
@@ -71,8 +74,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
     }
 
     pub fn offer(&mut self, val: T) -> bool {
-        let size = self.size();
-        if size == self.capacity() - 1 {
+        if self.size() == self.capacity() - 1 {
             false
         } else {
             unsafe {

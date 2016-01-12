@@ -86,4 +86,29 @@ describe! bounded_blocking_queue_test {
         assert_eq!(queue.peek(), Some(&1));
         assert_eq!(queue.peek(), Some(&1));
     }
+
+    it "should calculate correct size when alot insertions and deletions" {
+        for i in 1..11 {
+            queue.enqueue(i);
+            assert_eq!(queue.size(), i as usize);
+        }
+
+        let size = queue.size();
+        for i in 1..6 {
+            queue.dequeue();
+            assert_eq!(queue.size(), size - (i as usize));
+        }
+
+        let size = queue.size();
+        for i in 1..11 {
+            queue.enqueue(i);
+            assert_eq!(queue.size(), size + (i as usize));
+        }
+
+        let size = queue.size();
+        for i in 1..6 {
+            queue.dequeue();
+            assert_eq!(queue.size(), size - (i as usize));
+        }
+    }
 }
