@@ -89,8 +89,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
             None
         } else {
             unsafe {
-                let first = self.data.ptr().offset(self.head as isize);
-                Some(&(ptr::read(first)))
+                self.data.ptr().offset(self.head as isize).as_ref()
             }
         }
     }
