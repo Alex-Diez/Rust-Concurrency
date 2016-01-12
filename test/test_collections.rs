@@ -6,25 +6,30 @@ describe! bounded_blocking_queue_test {
 
     before_each {
         const CAPACITY : usize = 16;
-        let mut queue = BoundedBlockingQueue::new(CAPACITY);
+        let mut queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(CAPACITY);
     }
 
-    it "it should create a new empty queue" {
+    it "should create a new queue with default capacity" {
+        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::new();
+        assert_eq!(queue.capacity(), 16);
+    }
+
+    it "should create a new empty queue" {
         assert!(queue.is_empty());
         assert_eq!(queue.size(), 0);
     }
 
     it "should capacity be always highest power of two" {
-        let queue = BoundedBlockingQueue::new(6);
+        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(6);
         assert_eq!(queue.capacity(), 8);
 
-        let queue = BoundedBlockingQueue::new(10);
+        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(10);
         assert_eq!(queue.capacity(), 16);
 
-        let queue = BoundedBlockingQueue::new(20);
+        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(20);
         assert_eq!(queue.capacity(), 32);
 
-        let queue = BoundedBlockingQueue::new(40);
+        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(40);
         assert_eq!(queue.capacity(), 64);
     }
 
@@ -55,15 +60,30 @@ describe! bounded_blocking_queue_test {
         queue.enqueue(20);
         queue.enqueue(30);
 
-        assert_eq!(queue.dequeue(), 10);
-        assert_eq!(queue.dequeue(), 20);
-        assert_eq!(queue.dequeue(), 30);
+        assert_eq!(queue.dequeue(), Some(10));
+        assert_eq!(queue.dequeue(), Some(20));
+        assert_eq!(queue.dequeue(), Some(30));
+        assert_eq!(queue.dequeue(), None);
     }
 
     it "should not enqueue more than capacity" {
-        for i in 0..CAPACITY + 1 {
+        for i in 0..CAPACITY {
             queue.enqueue(i as i32);
         }
-        assert_eq!(queue.size(), CAPACITY);
+        assert_eq!(queue.size(), CAPACITY - 1);
+    }
+
+    it "should insert offered value if queue not full" {
+        assert!(queue.offer(1));
+        assert!(queue.contains(1));
+    }
+
+    it "should peek first element but not delete from queue" {
+        queue.enqueue(1);
+        queue.enqueue(2);
+        queue.enqueue(3);
+
+        assert_eq!(queue.peek(), Some(&1));
+        assert_eq!(queue.peek(), Some(&1));
     }
 }
