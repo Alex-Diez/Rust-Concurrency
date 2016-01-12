@@ -33,14 +33,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
     }
 
     pub fn size(&self) -> usize {
-        println!("head - {:?}", self.head);
-        println!("tail - {:?}", self.tail);
-        println!("=======================");
-        if self.head < self.tail {
-            (self.head + self.tail) & (self.data.cap() - 1)
-        } else {
-            usize::MAX - (usize::MAX - self.head + self.tail) & (self.data.cap() - 1)
-        }
+        (self.data.cap() - self.head + self.tail)  & (self.data.cap() - 1)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -55,7 +48,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
                 let p = self.data.ptr().offset(next as isize);
                 let v = ptr::read(p);
                 find = v == val;
-                next = (next + 1) & (self.data.cap() - 1);
+                next = next_node_index(next, self.data.cap() - 1);
             }
         }
         find
@@ -67,7 +60,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         } else {
             unsafe {
                 let first = self.data.ptr().offset(self.head as isize);
-                self.head = (self.head + 1) & (self.data.cap() - 1);
+                self.head = next_node_index(self.head, self.data.cap() - 1);
                 Some(ptr::read(first))
             }
         }
@@ -79,7 +72,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         } else {
             unsafe {
                 let last = self.data.ptr().offset(self.tail as isize);
-                self.tail = (self.tail + 1) & (self.data.cap() - 1);
+                self.tail = next_node_index(self.tail, self.data.cap() - 1);
                 ptr::write(last, val);
             }
             true
@@ -106,4 +99,8 @@ fn round_up_to_next_highest_power_of_two(mut v: usize) -> usize {
     v |= v >> 16;
     v += 1;
     v
+}
+
+fn next_node_index(index: usize, mask: usize) -> usize {
+    (index + 1) & mask
 }
