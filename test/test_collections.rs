@@ -2,11 +2,15 @@ extern crate concurrent;
 
 pub use self::concurrent::collections::BoundedBlockingQueue;
 
+pub use std::sync::Arc;
+pub use std::thread;
+pub use std::time::Duration;
+
 describe! bounded_blocking_queue_test {
 
     before_each {
         const CAPACITY : usize = 16;
-        let mut queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(CAPACITY);
+        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(CAPACITY);
     }
 
     it "should create a new queue with default capacity" {
@@ -60,10 +64,9 @@ describe! bounded_blocking_queue_test {
         queue.enqueue(20);
         queue.enqueue(30);
 
-        assert_eq!(queue.dequeue(), Some(10));
-        assert_eq!(queue.dequeue(), Some(20));
-        assert_eq!(queue.dequeue(), Some(30));
-        assert_eq!(queue.dequeue(), None);
+        assert_eq!(queue.dequeue(), 10);
+        assert_eq!(queue.dequeue(), 20);
+        assert_eq!(queue.dequeue(), 30);
     }
 
     it "should not enqueue more than capacity" {
@@ -83,8 +86,8 @@ describe! bounded_blocking_queue_test {
         queue.enqueue(2);
         queue.enqueue(3);
 
-        assert_eq!(queue.peek(), Some(&1));
-        assert_eq!(queue.peek(), Some(&1));
+        assert_eq!(queue.peek(), Some(1));
+        assert_eq!(queue.peek(), Some(1));
     }
 
     it "should calculate correct size when alot insertions and deletions" {
@@ -135,5 +138,30 @@ describe! bounded_blocking_queue_test {
             queue.dequeue();
             assert_eq!(queue.size(), size - (i as usize));
         }
+    }
+
+    it "should dequeue await when queue is empty" {
+        let arc = Arc::new(queue);
+        for i in 0..16 {
+            arc.enqueue(i);
+        }
+        let data = arc.clone();
+        let jh = thread::spawn(
+            move || {
+                let mut num = 0;
+                while !data.is_empty() {
+                    let datum = data.dequeue();
+                    assert_eq!(datum, num);
+                    num += 1;
+                }
+                assert_eq!(num, 100);
+            }
+        );
+
+        for i in 16..100 {
+            arc.enqueue(i);
+        }
+
+        assert!(jh.join().is_ok());
     }
 }

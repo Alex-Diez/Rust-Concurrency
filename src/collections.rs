@@ -6,22 +6,20 @@ use std::ptr;
 use std::cmp::PartialEq;
 use std::option::Option;
 use std::usize;
+use std::sync::Mutex;
+use std::sync::Condvar;
 
-pub struct BoundedBlockingQueue<T> {
+struct BoundedBlockingQueueState<T> {
     head: usize,
     tail: usize,
     data: RawVec<T>
 }
 
-impl <T: PartialEq> BoundedBlockingQueue<T> {
+impl <T: PartialEq> BoundedBlockingQueueState<T> {
 
-    pub fn new() -> BoundedBlockingQueue<T> {
-        BoundedBlockingQueue::with_capacity(16)
-    }
-
-    pub fn with_capacity(capacity: usize) -> BoundedBlockingQueue<T> {
+    pub fn new(capacity: usize) -> BoundedBlockingQueueState<T> {
         let capacity = round_up_to_next_highest_power_of_two(capacity);
-        BoundedBlockingQueue { head: 0, tail: 0, data: RawVec::with_capacity(capacity) }
+        BoundedBlockingQueueState { head: 0, tail: 0, data: RawVec::with_capacity(capacity) }
     }
 
     pub fn capacity(&self) -> usize {
@@ -54,15 +52,11 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         find
     }
 
-    pub fn dequeue(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            unsafe {
-                let first = self.data.ptr().offset(self.head as isize);
-                self.head = next_node_index(self.head, self.data.cap() - 1);
-                Some(ptr::read(first))
-            }
+    pub fn dequeue(&mut self) -> T {
+        unsafe {
+            let head = self.data.ptr().offset(self.head as isize);
+            self.head = next_node_index(self.head, self.data.cap() - 1);
+            ptr::read(head)
         }
     }
 
@@ -71,22 +65,94 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
             false
         } else {
             unsafe {
-                let last = self.data.ptr().offset(self.tail as isize);
+                let tail = self.data.ptr().offset(self.tail as isize);
                 self.tail = next_node_index(self.tail, self.data.cap() - 1);
-                ptr::write(last, val);
+                ptr::write(tail, val);
             }
             true
         }
     }
 
-    pub fn peek(&self) -> Option<&T> {
+    pub fn peek(&self) -> Option<T> {
         if self.is_empty() {
             None
         } else {
             unsafe {
-                self.data.ptr().offset(self.head as isize).as_ref()
+                let head = self.data.ptr().offset(self.head as isize);
+                Some(ptr::read(head))
             }
         }
+    }
+}
+
+pub struct BoundedBlockingQueue<T> {
+    mutex: Mutex<BoundedBlockingQueueState<T>>,
+    empty: Condvar,
+    full: Condvar
+}
+
+impl <T: PartialEq> BoundedBlockingQueue<T> {
+
+    pub fn new() -> BoundedBlockingQueue<T> {
+        BoundedBlockingQueue::with_capacity(16)
+    }
+
+    pub fn with_capacity(capacity: usize) -> BoundedBlockingQueue<T> {
+        let capacity = round_up_to_next_highest_power_of_two(capacity);
+        BoundedBlockingQueue {
+            mutex: Mutex::new(BoundedBlockingQueueState::new(capacity)),
+            empty: Condvar::new(),
+            full: Condvar::new()
+        }
+    }
+
+    pub fn capacity(&self) -> usize {
+        let guard = self.mutex.lock().unwrap();
+        guard.data.cap()
+    }
+
+    pub fn enqueue(&self, val: T) {
+        let mut guard = self.mutex.lock().unwrap();
+        while guard.size() == guard.capacity() - 1 {
+            guard = self.full.wait(guard).unwrap();
+        }
+        guard.enqueue(val);
+        self.empty.notify_all();
+    }
+
+    pub fn size(&self) -> usize {
+        let guard = self.mutex.lock().unwrap();
+        guard.size()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        let guard = self.mutex.lock().unwrap();
+        guard.is_empty()
+    }
+
+    pub fn contains(&self, val: T) -> bool {
+        let guard = self.mutex.lock().unwrap();
+        guard.contains(val)
+    }
+
+    pub fn dequeue(&self) -> T {
+        let mut guard = self.mutex.lock().unwrap();
+        while guard.is_empty() {
+            guard = self.empty.wait(guard).unwrap();
+        }
+        let val = guard.dequeue();
+        self.full.notify_all();
+        val
+    }
+
+    pub fn offer(&self, val: T) -> bool {
+        let mut guard = self.mutex.lock().unwrap();
+        guard.offer(val)
+    }
+
+    pub fn peek(&self) -> Option<T> {
+        let guard = self.mutex.lock().unwrap();
+        guard.peek()
     }
 }
 
