@@ -3,8 +3,11 @@ extern crate concurrent;
 pub use self::concurrent::collections::BoundedBlockingQueue;
 
 pub use std::sync::Arc;
-pub use std::thread;
+pub use std::sync::atomic::{AtomicBool, Ordering};
 pub use std::time::Duration;
+
+pub use std::thread;
+pub use std::sync::mpsc;
 
 describe! bounded_blocking_queue_test {
 
@@ -67,13 +70,6 @@ describe! bounded_blocking_queue_test {
         assert_eq!(queue.dequeue(), 10);
         assert_eq!(queue.dequeue(), 20);
         assert_eq!(queue.dequeue(), 30);
-    }
-
-    it "should not enqueue more than capacity" {
-        for i in 0..CAPACITY {
-            queue.enqueue(i as i32);
-        }
-        assert_eq!(queue.size(), CAPACITY - 1);
     }
 
     it "should insert offered value if queue not full" {
@@ -142,25 +138,29 @@ describe! bounded_blocking_queue_test {
 
     it "should dequeue await when queue is empty" {
         let arc = Arc::new(queue);
-        for i in 0..16 {
-            arc.enqueue(i);
-        }
+        let flag = Arc::new(AtomicBool::new(false));
+
         let data = arc.clone();
+        let ready = flag.clone();
         let jh = thread::spawn(
             move || {
-                let mut num = 0;
-                while !data.is_empty() {
+                let mut counter = 0;
+                let mut sum = 0;
+                while !data.is_empty() || !ready.load(Ordering::Relaxed) {
                     let datum = data.dequeue();
-                    assert_eq!(datum, num);
-                    num += 1;
+                    assert_eq!(datum, counter);
+                    counter += 1;
+                    sum += datum;
                 }
-                assert_eq!(num, 100);
+                assert_eq!(sum, 4950);
             }
         );
 
-        for i in 16..100 {
+        for i in 0..100 {
             arc.enqueue(i);
         }
+
+        flag.store(true, Ordering::Relaxed);
 
         assert!(jh.join().is_ok());
     }

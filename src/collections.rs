@@ -17,28 +17,32 @@ struct BoundedBlockingQueueState<T> {
 
 impl <T: PartialEq> BoundedBlockingQueueState<T> {
 
-    pub fn new(capacity: usize) -> BoundedBlockingQueueState<T> {
+    fn new(capacity: usize) -> BoundedBlockingQueueState<T> {
         let capacity = round_up_to_next_highest_power_of_two(capacity);
         BoundedBlockingQueueState { head: 0, tail: 0, data: RawVec::with_capacity(capacity) }
     }
 
-    pub fn capacity(&self) -> usize {
+    fn capacity(&self) -> usize {
         self.data.cap()
     }
 
-    pub fn enqueue(&mut self, val: T) {
-        self.offer(val);
-    }
-
-    pub fn size(&self) -> usize {
+    fn size(&self) -> usize {
         (self.data.cap() - self.head + self.tail)  & (self.data.cap() - 1)
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.size() == 0
     }
 
-    pub fn contains(&self, val: T) -> bool {
+    fn is_full(&self) -> bool {
+        self.size() == self.capacity() - 1
+    }
+
+    fn enqueue(&mut self, val: T) {
+        self.offer(val);
+    }
+
+    fn contains(&self, val: T) -> bool {
         let mut next = self.head;
         let mut find = false;
         while next != self.tail && !find {
@@ -52,7 +56,7 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
         find
     }
 
-    pub fn dequeue(&mut self) -> T {
+    fn dequeue(&mut self) -> T {
         unsafe {
             let head = self.data.ptr().offset(self.head as isize);
             self.head = next_node_index(self.head, self.data.cap() - 1);
@@ -60,7 +64,7 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
         }
     }
 
-    pub fn offer(&mut self, val: T) -> bool {
+    fn offer(&mut self, val: T) -> bool {
         if self.size() == self.capacity() - 1 {
             false
         } else {
@@ -73,7 +77,7 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
         }
     }
 
-    pub fn peek(&self) -> Option<T> {
+    fn peek(&self) -> Option<T> {
         if self.is_empty() {
             None
         } else {
@@ -108,12 +112,12 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
 
     pub fn capacity(&self) -> usize {
         let guard = self.mutex.lock().unwrap();
-        guard.data.cap()
+        guard.capacity()
     }
 
     pub fn enqueue(&self, val: T) {
         let mut guard = self.mutex.lock().unwrap();
-        while guard.size() == guard.capacity() - 1 {
+        while guard.is_full() {
             guard = self.full.wait(guard).unwrap();
         }
         guard.enqueue(val);
