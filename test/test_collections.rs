@@ -170,8 +170,7 @@ describe! bounded_blocking_queue_test {
 
         assert!(jh.join().is_ok());
     }
-
-    /*it "should notify consumer after offering value into queue" {
+    it "IS POSSIBLY NOT CORRECT should notify consumer after offering value into queue" {
         let arc = Arc::new(queue);
         let flag = Arc::new(AtomicBool::new(false));
 
@@ -180,9 +179,14 @@ describe! bounded_blocking_queue_test {
         let jh = thread::spawn(
             move || {
                 while !ready.load(Ordering::Relaxed) {
-                    let res = data.dequeue_with_timeout(Duration::from_millis(10));
-                    //res should be some when queue is empty and none when full
-                    assert!(data.is_empty() && res.is_none());
+                    let emptiness = data.is_empty();
+                    let res = data.dequeue_with_timeout(Duration::from_millis(5));
+                    //res should be some when queue is not empty and none when empty
+                    if emptiness {
+                        assert!(res.is_none());
+                    } else {
+                        assert!(res.is_some());
+                    }
                 }
             }
         );
@@ -190,10 +194,11 @@ describe! bounded_blocking_queue_test {
         for i in 0..100 {
             let ret = arc.offer(i);
             assert_eq!(ret, arc.size() == CAPACITY - 1);
+            thread::sleep(Duration::from_millis(10));
         }
 
         flag.store(true, Ordering::Relaxed);
 
         assert!(jh.join().is_ok());
-    }*/
+    }
 }
