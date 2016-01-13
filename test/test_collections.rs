@@ -9,6 +9,12 @@ pub use std::time::Duration;
 pub use std::thread;
 pub use std::sync::mpsc;
 
+/*
+ * TODO
+ * 1. check queue's fullness
+ * 2. add enqueue with timeout
+ * 3. add non blocked dequeue method
+ */
 describe! bounded_blocking_queue_test {
 
     before_each {
@@ -136,7 +142,7 @@ describe! bounded_blocking_queue_test {
         }
     }
 
-    it "should dequeue await when queue is empty" {
+    it "should threads wait each other when queue is empty or full" {
         let arc = Arc::new(queue);
         let flag = Arc::new(AtomicBool::new(false));
 
@@ -164,4 +170,30 @@ describe! bounded_blocking_queue_test {
 
         assert!(jh.join().is_ok());
     }
+
+    /*it "should notify consumer after offering value into queue" {
+        let arc = Arc::new(queue);
+        let flag = Arc::new(AtomicBool::new(false));
+
+        let data = arc.clone();
+        let ready = flag.clone();
+        let jh = thread::spawn(
+            move || {
+                while !ready.load(Ordering::Relaxed) {
+                    let res = data.dequeue_with_timeout(Duration::from_millis(10));
+                    //res should be some when queue is empty and none when full
+                    assert!(data.is_empty() && res.is_none());
+                }
+            }
+        );
+
+        for i in 0..100 {
+            let ret = arc.offer(i);
+            assert_eq!(ret, arc.size() == CAPACITY - 1);
+        }
+
+        flag.store(true, Ordering::Relaxed);
+
+        assert!(jh.join().is_ok());
+    }*/
 }

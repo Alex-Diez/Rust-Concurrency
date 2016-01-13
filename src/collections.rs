@@ -6,8 +6,8 @@ use std::ptr;
 use std::cmp::PartialEq;
 use std::option::Option;
 use std::usize;
-use std::sync::Mutex;
-use std::sync::Condvar;
+use std::sync::{Mutex, Condvar};
+use std::time::Duration;
 
 struct BoundedBlockingQueueState<T> {
     head: usize,
@@ -65,7 +65,7 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
     }
 
     fn offer(&mut self, val: T) -> bool {
-        if self.size() == self.capacity() - 1 {
+        if self.is_full() {
             false
         } else {
             unsafe {
@@ -147,6 +147,10 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         let val = guard.dequeue();
         self.full.notify_all();
         val
+    }
+
+    pub fn dequeue_with_timeout(&self, timeout: Duration) -> Option<T> {
+        None
     }
 
     pub fn offer(&self, val: T) -> bool {
