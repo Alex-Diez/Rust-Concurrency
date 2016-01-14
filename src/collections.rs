@@ -151,24 +151,6 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         val
     }
 
-    pub fn dequeue_with_timeout(&self, timeout: Duration) -> Option<T> {
-        match self.mutex.try_lock() {
-            Ok(mut guard) => Some(guard.dequeue()),
-            Err(block) => {
-                match block {
-                    TryLockError::Poisoned(error) => None,
-                    TryLockError::WouldBlock => {
-                        thread::sleep(timeout);
-                        match self.mutex.try_lock() {
-                            Ok(mut guard) => Some(guard.dequeue()),
-                            Err(_) => None,
-                        }
-                    },
-                }
-            },
-        }
-    }
-
     pub fn offer(&self, val: T) -> bool {
         let mut guard = self.mutex.lock().unwrap();
         if guard.offer(val) {
