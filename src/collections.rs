@@ -183,3 +183,34 @@ fn round_up_to_next_highest_power_of_two(mut v: usize) -> usize {
 fn next_node_index(index: usize, mask: usize) -> usize {
     (index + 1) & mask
 }
+
+pub struct UnboundedBlockingQueue {
+    size: usize
+}
+
+impl UnboundedBlockingQueue {
+
+    pub fn new() -> UnboundedBlockingQueue {
+        UnboundedBlockingQueue { size: 0 }
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+
+    pub fn enqueue(&mut self, val: i32) {
+        self.size += 1;
+    }
+
+    pub fn dequeue(&mut self) {
+        self.size -= 1;
+    }
+
+    pub fn contains(&self, val: i32) -> bool {
+        true
+    }
+}

@@ -1,6 +1,7 @@
 extern crate concurrent;
 
 pub use self::concurrent::collections::BoundedBlockingQueue;
+pub use self::concurrent::collections::UnboundedBlockingQueue;
 
 pub use std::sync::Arc;
 pub use std::sync::atomic::{AtomicBool, Ordering};
@@ -163,5 +164,38 @@ describe! bounded_blocking_queue_test {
         flag.store(true, Ordering::Relaxed);
 
         assert!(jh.join().is_ok());
+    }
+}
+
+describe! unbounded_blocking_queue_test {
+
+    before_each {
+        let mut queue = UnboundedBlockingQueue::new();
+    }
+
+    it "should create new empty unbounded queue" {
+        assert_eq!(queue.size(), 0);
+        assert!(queue.is_empty());
+    }
+
+    it "should increase queue size when enqueue value" {
+        let old_size = queue.size();
+        queue.enqueue(1);
+
+        assert_eq!(queue.size(), old_size + 1);
+    }
+
+    it "should decrease queue size when dequeue value" {
+        queue.enqueue(1);
+        let old_size = queue.size();
+        queue.dequeue();
+
+        assert_eq!(queue.size(), old_size - 1);
+    }
+
+    it "should contains value that was enqueued" {
+        queue.enqueue(1);
+        assert!(queue.contains(1));
+        assert!(!queue.contains(2));
     }
 }
