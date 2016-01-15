@@ -5,11 +5,7 @@ use self::alloc::raw_vec::RawVec;
 use std::ptr;
 use std::cmp::PartialEq;
 use std::option::Option;
-use std::usize;
 use std::sync::{Mutex, Condvar};
-use std::sync::TryLockError;
-use std::time::Duration;
-use std::thread;
 
 struct BoundedBlockingQueueState<T> {
     head: usize,
@@ -24,24 +20,29 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
         BoundedBlockingQueueState { head: 0, tail: 0, data: RawVec::with_capacity(capacity) }
     }
 
+    #[inline]
+    fn remaning_capacity(&self) -> usize {
+        self.data.cap() - self.size() - 1
+    }
+
+    #[inline]
     fn capacity(&self) -> usize {
         self.data.cap()
     }
 
+    #[inline]
     fn size(&self) -> usize {
         (self.data.cap() - self.head + self.tail)  & (self.data.cap() - 1)
     }
 
+    #[inline]
     fn is_empty(&self) -> bool {
         self.size() == 0
     }
 
+    #[inline]
     fn is_full(&self) -> bool {
         self.size() == self.capacity() - 1
-    }
-
-    fn enqueue(&mut self, val: T) {
-        self.offer(val);
     }
 
     fn contains(&self, val: T) -> bool {
@@ -66,7 +67,7 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
         }
     }
 
-    fn offer(&mut self, val: T) -> bool {
+    fn enqueue(&mut self, val: T) -> bool {
         if self.is_full() {
             false
         } else {
@@ -112,9 +113,9 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         }
     }
 
-    pub fn capacity(&self) -> usize {
+    pub fn remaning_capacity(&self) -> usize {
         let guard = self.mutex.lock().unwrap();
-        guard.capacity()
+        guard.remaning_capacity()
     }
 
     pub fn enqueue(&self, val: T) {
@@ -153,7 +154,8 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
 
     pub fn offer(&self, val: T) -> bool {
         let mut guard = self.mutex.lock().unwrap();
-        if guard.offer(val) {
+        if guard.enqueue(val) {
+            //TODO there is no test for this case
             self.empty.notify_all();
             true
         } else {

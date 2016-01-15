@@ -18,7 +18,7 @@ describe! bounded_blocking_queue_test {
 
     it "should create a new queue with default capacity" {
         let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::new();
-        assert_eq!(queue.capacity(), 16);
+        assert_eq!(queue.remaning_capacity(), 15);
     }
 
     it "should create a new empty queue" {
@@ -28,16 +28,16 @@ describe! bounded_blocking_queue_test {
 
     it "should capacity be always highest power of two" {
         let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(6);
-        assert_eq!(queue.capacity(), 8);
+        assert_eq!(queue.remaning_capacity(), 7);
 
         let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(10);
-        assert_eq!(queue.capacity(), 16);
+        assert_eq!(queue.remaning_capacity(), 15);
 
         let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(20);
-        assert_eq!(queue.capacity(), 32);
+        assert_eq!(queue.remaning_capacity(), 31);
 
         let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(40);
-        assert_eq!(queue.capacity(), 64);
+        assert_eq!(queue.remaning_capacity(), 63);
     }
 
     it "should increase size when insert into queue" {
