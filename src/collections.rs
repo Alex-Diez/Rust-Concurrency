@@ -185,13 +185,14 @@ fn next_node_index(index: usize, mask: usize) -> usize {
 }
 
 pub struct UnboundedBlockingQueue {
+    elems: Vec<i32>,
     size: usize
 }
 
 impl UnboundedBlockingQueue {
 
     pub fn new() -> UnboundedBlockingQueue {
-        UnboundedBlockingQueue { size: 0 }
+        UnboundedBlockingQueue { size: 0, elems: vec![] }
     }
 
     pub fn size(&self) -> usize {
@@ -204,6 +205,7 @@ impl UnboundedBlockingQueue {
 
     pub fn enqueue(&mut self, val: i32) {
         self.size += 1;
+        self.elems.push(val);
     }
 
     pub fn dequeue(&mut self) {
@@ -211,6 +213,6 @@ impl UnboundedBlockingQueue {
     }
 
     pub fn contains(&self, val: i32) -> bool {
-        true
+        self.elems.contains(&val)
     }
 }
