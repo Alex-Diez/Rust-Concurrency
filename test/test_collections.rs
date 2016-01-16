@@ -27,7 +27,7 @@ describe! bounded_blocking_queue_test {
         assert_eq!(queue.size(), 0);
     }
 
-    it "should capacity be always highest power of two" {
+    it "should have capacity that is always highest power of two minus one" {
         let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(6);
         assert_eq!(queue.remaning_capacity(), 7);
 
@@ -48,11 +48,26 @@ describe! bounded_blocking_queue_test {
         assert_eq!(queue.size(), old_size + 1);
     }
 
-    it "should contains value that was equeued" {
+    it "should contain value that was equeued" {
         queue.enqueue(1);
 
         assert!(queue.contains(1));
-        assert!(!queue.contains(2));
+    }
+
+    it "should contain values that were enqueued" {
+        queue.enqueue(10);
+        queue.enqueue(20);
+        queue.enqueue(30);
+        queue.enqueue(40);
+
+        assert!(queue.contains(10));
+        assert!(queue.contains(20));
+        assert!(queue.contains(30));
+        assert!(queue.contains(40));
+    }
+
+    it "should not contain value that was not enqueued" {
+        assert!(!queue.contains(10));
     }
 
     it "should decrise size when remove from queue" {
@@ -78,7 +93,7 @@ describe! bounded_blocking_queue_test {
         assert!(queue.contains(1));
     }
 
-    it "should peek first element but not delete from queue" {
+    it "should peek first element but not delete" {
         queue.enqueue(1);
         queue.enqueue(2);
         queue.enqueue(3);
@@ -197,13 +212,24 @@ describe! unbounded_blocking_queue_test {
         assert_eq!(queue.size(), old_size - 1);
     }
 
-    it "should contain values that were enqueued" {
+    it "should contain value that was enqueued" {
         queue.enqueue(1);
         assert!(queue.contains(1));
-        assert!(!queue.contains(2));
+    }
 
-        queue.enqueue(2);
-        assert!(queue.contains(1));
-        assert!(queue.contains(2));
+    it "should contain values that were enqueued" {
+        queue.enqueue(10);
+        queue.enqueue(20);
+        queue.enqueue(30);
+        queue.enqueue(40);
+
+        assert!(queue.contains(10));
+        assert!(queue.contains(20));
+        assert!(queue.contains(30));
+        assert!(queue.contains(40));
+    }
+
+    it "should not contain value that was not enqueued" {
+        assert!(!queue.contains(10));
     }
 }
