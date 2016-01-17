@@ -152,7 +152,7 @@ describe! bounded_blocking_queue_test {
         }
     }
 
-    it "should threads wait each other when queue is empty" {
+    it "should wait when queue is empty" {
         const NUMBER_OF_THREADS: usize = 10;
         let arc = Arc::new(queue);
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
@@ -177,7 +177,7 @@ describe! bounded_blocking_queue_test {
         assert_eq!(arc.dequeue(), 1);
     }
 
-    it "should threads notify each other when offer value to queue" {
+    it "should notify threads when offer value to queue" {
         const NUMBER_OF_THREADS: usize = 20;
         let arc = Arc::new(queue);
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
@@ -201,6 +201,35 @@ describe! bounded_blocking_queue_test {
         }
 
         assert_eq!(arc.dequeue(), 1);
+    }
+
+    it "should wait when queue is full" {
+        const NUMBER_OF_THREADS: usize = CAPACITY-2;
+        for _ in 0..CAPACITY-1 {
+            queue.enqueue(1);
+        }
+        let arc = Arc::new(queue);
+        let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
+
+        for _ in 0..NUMBER_OF_THREADS {
+            let data = arc.clone();
+            let jh = thread::spawn(
+                move || {
+                    data.enqueue(10);
+                    assert_eq!(data.dequeue(), 1);
+                }
+            );
+            results.push(jh);
+        }
+
+        thread::sleep(Duration::from_millis(100));
+        assert_eq!(arc.dequeue(), 1);
+
+        for jh in results {
+            assert!(jh.join().is_ok());
+        }
+
+        assert_eq!(arc.size(), CAPACITY-2);
     }
 }
 
