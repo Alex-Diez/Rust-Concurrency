@@ -176,6 +176,32 @@ describe! bounded_blocking_queue_test {
 
         assert_eq!(arc.dequeue(), 1);
     }
+
+    it "should threads notify each other when offer value to queue" {
+        const NUMBER_OF_THREADS: usize = 20;
+        let arc = Arc::new(queue);
+        let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
+
+        for _ in 0..NUMBER_OF_THREADS {
+            let data = arc.clone();
+            let jh = thread::spawn(
+                move || {
+                    assert_eq!(data.dequeue(), 1);
+                    assert!(data.offer(1));
+                }
+            );
+            results.push(jh);
+        }
+
+        thread::sleep(Duration::from_millis(100));
+        assert!(arc.offer(1));
+
+        for jh in results {
+            assert!(jh.join().is_ok());
+        }
+
+        assert_eq!(arc.dequeue(), 1);
+    }
 }
 
 describe! unbounded_blocking_queue_test {

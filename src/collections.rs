@@ -159,7 +159,6 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
     pub fn offer(&self, val: T) -> bool {
         let mut guard = self.mutex.lock().unwrap();
         if guard.enqueue(val) {
-            //TODO there is no test for this case
             self.empty.notify_all();
             true
         } else {
