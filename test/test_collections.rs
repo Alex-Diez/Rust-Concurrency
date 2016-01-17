@@ -152,38 +152,30 @@ describe! bounded_blocking_queue_test {
         }
     }
 
-    //FAILED test
-    //some times threads get stuck
-    /*
     it "should threads wait each other when queue is empty or full" {
+        const NUMBER_OF_THREADS: usize = 10;
         let arc = Arc::new(queue);
-        let flag = Arc::new(AtomicBool::new(false));
+        let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
 
-        let data = arc.clone();
-        let ready = flag.clone();
-        let jh = thread::spawn(
-            move || {
-                let mut counter = 0;
-                let mut sum = 0;
-                while !data.is_empty() || !ready.load(Ordering::Relaxed) {
-                    let datum = data.dequeue();
-                    assert_eq!(datum, counter);
-                    counter += 1;
-                    sum += datum;
+        for _ in 0..NUMBER_OF_THREADS {
+            let data = arc.clone();
+            let jh = thread::spawn(
+                move || {
+                    assert_eq!(data.dequeue(), 1);
+                    data.enqueue(1);
                 }
-                assert_eq!(sum, 4950);
-            }
-        );
-
-        for i in 0..100 {
-            arc.enqueue(i);
+            );
+            results.push(jh);
         }
 
-        flag.store(true, Ordering::Relaxed);
+        arc.enqueue(1);
 
-        assert!(jh.join().is_ok());
+        for jh in results {
+            assert!(jh.join().is_ok());
+        }
+
+        assert_eq!(arc.dequeue(), 1);
     }
-    */
 }
 
 describe! unbounded_blocking_queue_test {
