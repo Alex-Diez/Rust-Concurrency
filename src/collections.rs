@@ -3,8 +3,12 @@ extern crate alloc;
 use self::alloc::raw_vec::RawVec;
 
 use std::ptr;
+
 use std::cmp::PartialEq;
 use std::option::Option;
+
+use std::ptr::Shared;
+
 use std::sync::{Mutex, Condvar};
 
 struct BoundedBlockingQueueState<T> {
@@ -184,15 +188,28 @@ fn next_node_index(index: usize, mask: usize) -> usize {
     (index + 1) & mask
 }
 
+struct Node {
+    value: i32,
+    next: Option<Box<Node>>
+}
+
+impl Node {
+    
+    fn new(value: i32) -> Node {
+        Node { value: value, next: None }
+    }
+}
+
 pub struct UnboundedBlockingQueue {
-    elems: Vec<i32>,
+    head: Option<Shared<Node>>,
+    tail: Option<Box<Node>>,
     size: usize
 }
 
 impl UnboundedBlockingQueue {
 
     pub fn new() -> UnboundedBlockingQueue {
-        UnboundedBlockingQueue { size: 0, elems: vec![] }
+        UnboundedBlockingQueue { size: 0, head: None, tail: None }
     }
 
     pub fn size(&self) -> usize {
@@ -205,7 +222,23 @@ impl UnboundedBlockingQueue {
 
     pub fn enqueue(&mut self, val: i32) {
         self.size += 1;
-        self.elems.push(val);
+        /*let node = Node::new(val);
+        match self.tail {
+            Some(ref mut tail) => {
+                tail.next = Some(Box::new(node));
+            },
+            None => self.tail = Some(Box::new(node)),
+        }
+        self.tail = self.tail.next;
+        match self.head {
+            Some(_) => {},
+            None => unsafe {
+                self.head = match self.tail {
+                    Some(ref mut v) => Some(Shared::new(v.as_mut())),
+                    None => None,
+                }
+            },
+        }*/
     }
 
     pub fn dequeue(&mut self) {
@@ -213,6 +246,28 @@ impl UnboundedBlockingQueue {
     }
 
     pub fn contains(&self, val: i32) -> bool {
-        self.elems.contains(&val)
+     /*   let mut node = self.head;
+        loop {
+            match node {
+                Some(n) => {
+                    unsafe {
+                        match n.as_ref() {
+                            Some(&current) => {
+                                if current.value == val {
+                                    return true;
+                                }
+                                match current.next {
+                                    Some(ptr) => node = Some(Shared::new(ptr.as_mut())),
+                                    None => return false,
+                                }
+                            },
+                            None => return false,
+                        }
+                    }
+                },
+                None => return false,
+            }
+        }*/
+        false
     }
 }

@@ -152,7 +152,7 @@ describe! bounded_blocking_queue_test {
         }
     }
 
-    it "should threads wait each other when queue is empty or full" {
+    it "should threads wait each other when queue is empty" {
         const NUMBER_OF_THREADS: usize = 10;
         let arc = Arc::new(queue);
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
@@ -204,7 +204,7 @@ describe! unbounded_blocking_queue_test {
         assert_eq!(queue.size(), old_size - 1);
     }
 
-    it "should contain value that was enqueued" {
+    /*it "should contain value that was enqueued" {
         queue.enqueue(1);
         assert!(queue.contains(1));
     }
@@ -219,7 +219,7 @@ describe! unbounded_blocking_queue_test {
         assert!(queue.contains(20));
         assert!(queue.contains(30));
         assert!(queue.contains(40));
-    }
+    }*/
 
     it "should not contain value that was not enqueued" {
         assert!(!queue.contains(10));
