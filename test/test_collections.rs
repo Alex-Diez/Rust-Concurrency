@@ -289,4 +289,18 @@ describe! unbounded_blocking_queue_test {
         assert_eq!(queue.dequeue(), Some(20));
         assert_eq!(queue.dequeue(), Some(30));
     }
+
+    it "should insert offered value" {
+        assert!(queue.offer(1));
+        assert!(queue.contains(1));
+    }
+
+    it "should peek first element but not delete" {
+        queue.enqueue(1);
+        queue.enqueue(2);
+        queue.enqueue(3);
+
+        assert_eq!(queue.peek(), Some(&1));
+        assert_eq!(queue.peek(), Some(&1));
+    }
 }

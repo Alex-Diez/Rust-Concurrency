@@ -278,4 +278,13 @@ impl <T: PartialEq> UnboundedBlockingQueue<T> {
             None => false
         }
     }
+
+    pub fn offer(&mut self, val: T) -> bool {
+        self.enqueue(val);
+        true
+    }
+
+    pub fn peek(&self) -> Option<&T> {
+        self.head.as_ref().map(|node| { &node.value })
+    }
 }
