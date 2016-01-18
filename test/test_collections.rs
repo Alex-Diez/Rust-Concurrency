@@ -285,8 +285,8 @@ describe! unbounded_blocking_queue_test {
         queue.enqueue(20);
         queue.enqueue(30);
 
-        assert_eq!(queue.dequeue(), 10);
-        assert_eq!(queue.dequeue(), 20);
-        assert_eq!(queue.dequeue(), 30);
+        assert_eq!(queue.dequeue(), Some(10));
+        assert_eq!(queue.dequeue(), Some(20));
+        assert_eq!(queue.dequeue(), Some(30));
     }
 }

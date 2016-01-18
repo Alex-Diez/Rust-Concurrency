@@ -242,9 +242,16 @@ impl <'a> UnboundedBlockingQueue {
         self.tail = raw_tail;
     }
 
-    pub fn dequeue(&mut self) -> i32 {
+    pub fn dequeue(&mut self) -> Option<i32> {
         self.size -= 1;
-        1
+        self.head.take().map(|head| {
+            let head = *head;
+            self.head = head.next;
+            if self.head.is_none() {
+                self.tail = ptr::null_mut();
+            }
+            head.value
+        })
     }
 
     pub fn contains(&self, val: i32) -> bool {
