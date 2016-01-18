@@ -188,14 +188,14 @@ fn next_node_index(index: usize, mask: usize) -> usize {
 use std::boxed::Box;
 use std::mem;
 
-struct Node {
-    value: i32,
-    next: Option<Box<Node>>
+struct Node<T> {
+    value: T,
+    next: Option<Box<Node<T>>>
 }
 
-impl Node {
+impl <T> Node<T> {
     
-    fn new(value: i32) -> Node {
+    fn new(value: T) -> Node<T> {
         Node {
             value: value,
             next: None
@@ -203,15 +203,15 @@ impl Node {
     }
 }
 
-pub struct UnboundedBlockingQueue {
-    head: Option<Box<Node>>,
-    tail: *mut Node,
+pub struct UnboundedBlockingQueue<T> {
+    head: Option<Box<Node<T>>>,
+    tail: *mut Node<T>,
     size: usize
 }
 
-impl <'a> UnboundedBlockingQueue {
+impl <T: PartialEq> UnboundedBlockingQueue<T> {
 
-    pub fn new() -> UnboundedBlockingQueue {
+    pub fn new() -> UnboundedBlockingQueue<T> {
         UnboundedBlockingQueue {
             size: 0,
             head: None,
@@ -227,7 +227,7 @@ impl <'a> UnboundedBlockingQueue {
         self.size() == 0
     }
 
-    pub fn enqueue(&mut self, val: i32) {
+    pub fn enqueue(&mut self, val: T) {
         self.size += 1;
         let mut new_tail = Box::new(Node::new(val));
         let raw_tail: *mut _ = &mut *new_tail;
@@ -242,7 +242,7 @@ impl <'a> UnboundedBlockingQueue {
         self.tail = raw_tail;
     }
 
-    pub fn dequeue(&mut self) -> Option<i32> {
+    pub fn dequeue(&mut self) -> Option<T> {
         self.size -= 1;
         self.head.take().map(|head| {
             let head = *head;
@@ -254,7 +254,7 @@ impl <'a> UnboundedBlockingQueue {
         })
     }
 
-    pub fn contains(&self, val: i32) -> bool {
+    pub fn contains(&self, val: T) -> bool {
         match self.head {
             Some(ref head) => {
                 let mut node = head;

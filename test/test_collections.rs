@@ -236,7 +236,7 @@ describe! bounded_blocking_queue_test {
 describe! unbounded_blocking_queue_test {
 
     before_each {
-        let mut queue = UnboundedBlockingQueue::new();
+        let mut queue: UnboundedBlockingQueue<i32> = UnboundedBlockingQueue::new();
     }
 
     it "should create new empty unbounded queue" {
