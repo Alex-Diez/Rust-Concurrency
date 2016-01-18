@@ -259,7 +259,7 @@ describe! unbounded_blocking_queue_test {
         assert_eq!(queue.size(), old_size - 1);
     }
 
-    /*it "should contain value that was enqueued" {
+    it "should contain value that was enqueued" {
         queue.enqueue(1);
         assert!(queue.contains(1));
     }
@@ -274,9 +274,19 @@ describe! unbounded_blocking_queue_test {
         assert!(queue.contains(20));
         assert!(queue.contains(30));
         assert!(queue.contains(40));
-    }*/
+    }
 
     it "should not contain value that was not enqueued" {
         assert!(!queue.contains(10));
+    }
+
+    it "should dequeue first enqueued value" {
+        queue.enqueue(10);
+        queue.enqueue(20);
+        queue.enqueue(30);
+
+        assert_eq!(queue.dequeue(), 10);
+        assert_eq!(queue.dequeue(), 20);
+        assert_eq!(queue.dequeue(), 30);
     }
 }

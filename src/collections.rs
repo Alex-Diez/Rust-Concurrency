@@ -7,8 +7,6 @@ use std::ptr;
 use std::cmp::PartialEq;
 use std::option::Option;
 
-use std::ptr::Shared;
-
 use std::sync::{Mutex, Condvar};
 
 struct BoundedBlockingQueueState<T> {
@@ -187,6 +185,9 @@ fn next_node_index(index: usize, mask: usize) -> usize {
     (index + 1) & mask
 }
 
+use std::boxed::Box;
+use std::mem;
+
 struct Node {
     value: i32,
     next: Option<Box<Node>>
@@ -195,20 +196,27 @@ struct Node {
 impl Node {
     
     fn new(value: i32) -> Node {
-        Node { value: value, next: None }
+        Node {
+            value: value,
+            next: None
+        }
     }
 }
 
 pub struct UnboundedBlockingQueue {
-    head: Option<Shared<Node>>,
-    tail: Option<Box<Node>>,
+    head: Option<Box<Node>>,
+    tail: *mut Node,
     size: usize
 }
 
-impl UnboundedBlockingQueue {
+impl <'a> UnboundedBlockingQueue {
 
     pub fn new() -> UnboundedBlockingQueue {
-        UnboundedBlockingQueue { size: 0, head: None, tail: None }
+        UnboundedBlockingQueue {
+            size: 0,
+            head: None,
+            tail: ptr::null_mut()
+        }
     }
 
     pub fn size(&self) -> usize {
@@ -221,52 +229,46 @@ impl UnboundedBlockingQueue {
 
     pub fn enqueue(&mut self, val: i32) {
         self.size += 1;
-        /*let node = Node::new(val);
-        match self.tail {
-            Some(ref mut tail) => {
-                tail.next = Some(Box::new(node));
-            },
-            None => self.tail = Some(Box::new(node)),
+        let mut new_tail = Box::new(Node::new(val));
+        let raw_tail: *mut _ = &mut *new_tail;
+        if !self.tail.is_null() {
+            unsafe {
+                (* self.tail).next = Some(new_tail);
+            }
         }
-        self.tail = self.tail.next;
-        match self.head {
-            Some(_) => {},
-            None => unsafe {
-                self.head = match self.tail {
-                    Some(ref mut v) => Some(Shared::new(v.as_mut())),
-                    None => None,
-                }
-            },
-        }*/
+        else {
+            self.head = Some(new_tail);
+        }
+        self.tail = raw_tail;
     }
 
-    pub fn dequeue(&mut self) {
+    pub fn dequeue(&mut self) -> i32 {
         self.size -= 1;
+        1
     }
 
     pub fn contains(&self, val: i32) -> bool {
-     /*   let mut node = self.head;
-        loop {
-            match node {
-                Some(n) => {
-                    unsafe {
-                        match n.as_ref() {
-                            Some(&current) => {
-                                if current.value == val {
-                                    return true;
-                                }
-                                match current.next {
-                                    Some(ptr) => node = Some(Shared::new(ptr.as_mut())),
-                                    None => return false,
-                                }
-                            },
-                            None => return false,
-                        }
+        match self.head {
+            Some(ref head) => {
+                let mut node = head;
+                let mut find = false;
+                loop {
+                    if (*node).value == val {
+                        find = true;
                     }
-                },
-                None => return false,
-            }
-        }*/
-        false
+                    match (*node).next {
+                        Some(ref next) => {
+                            node = next;
+                        },
+                        None => break,
+                    }
+                    if find {
+                        break;
+                    }
+                }
+                find
+            },
+            None => false
+        }
     }
 }
