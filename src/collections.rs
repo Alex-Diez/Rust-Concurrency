@@ -2,7 +2,6 @@ extern crate alloc;
 
 use self::alloc::raw_vec::RawVec;
 
-use std::mem;
 use std::ptr;
 use std::ptr::Shared;
 use std::boxed::Box;
@@ -191,22 +190,30 @@ fn next_node_index(index: usize, mask: usize) -> usize {
 
 struct Node<T> {
     value: T,
-    next: Option<Box<Node<T>>>
+    next: BoxLink<T>
 }
 
 impl <T> Node<T> {
-    
+
     fn new(value: T) -> Node<T> {
-        Node {
-            value: value,
-            next: None
-        }
+        Node { value: value, next: None }
+    }
+    
+    fn box_link(value: T) -> Box<Node<T>> {
+        Box::new(Node::new(value))
+    }
+
+    fn share_link(ptr: *mut Node<T>) -> Shared<Node<T>> {
+        unsafe { Shared::new(ptr) }
     }
 }
 
+type BoxLink<T> = Option<Box<Node<T>>>;
+type ShareLink<T> = Option<Shared<Node<T>>>;
+
 pub struct UnboundedBlockingQueue<T> {
-    head: Option<Box<Node<T>>>,
-    tail: Option<Shared<Node<T>>>,
+    head: BoxLink<T>,
+    tail: ShareLink<T>,
     size: usize
 }
 
@@ -230,13 +237,13 @@ impl <T: PartialEq + Clone> UnboundedBlockingQueue<T> {
 
     pub fn enqueue(&mut self, val: T) {
         self.size += 1;
-        let mut new_tail = Box::new(Node::new(val));
+        let mut new_tail = Node::box_link(val);
         let raw_tail: *mut _ = &mut *new_tail;
         match self.tail {
             Some(ref mut share) => unsafe { share.as_mut().map(|node| { node.next = Some(new_tail) }); },
             None => self.head = Some(new_tail),
         }
-        self.tail = unsafe { Some(Shared::new(raw_tail)) }
+        self.tail = Some(Node::share_link(raw_tail))
     }
 
     pub fn dequeue(&mut self) -> T {
