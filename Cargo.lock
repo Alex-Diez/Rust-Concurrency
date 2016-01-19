@@ -1,5 +1,5 @@
 [root]
-name = "rust-concurrent"
+name = "concrust"
 version = "0.0.2"
 dependencies = [
  "stainless 0.1.3 (git+https://github.com/reem/stainless.git)",

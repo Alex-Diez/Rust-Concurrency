@@ -285,9 +285,9 @@ describe! unbounded_blocking_queue_test {
         queue.enqueue(20);
         queue.enqueue(30);
 
-        assert_eq!(queue.dequeue(), Some(10));
-        assert_eq!(queue.dequeue(), Some(20));
-        assert_eq!(queue.dequeue(), Some(30));
+        assert_eq!(queue.dequeue(), 10);
+        assert_eq!(queue.dequeue(), 20);
+        assert_eq!(queue.dequeue(), 30);
     }
 
     it "should insert offered value" {
@@ -300,7 +300,32 @@ describe! unbounded_blocking_queue_test {
         queue.enqueue(2);
         queue.enqueue(3);
 
-        assert_eq!(queue.peek(), Some(&1));
-        assert_eq!(queue.peek(), Some(&1));
+        assert_eq!(queue.peek(), Some(1));
+        assert_eq!(queue.peek(), Some(1));
+    }
+
+    it "should wait when queue is empty" {
+        const NUMBER_OF_THREADS: usize = 10;
+        let arc = Arc::new(queue);
+        let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
+
+        for _ in 0..NUMBER_OF_THREADS {
+            let data = arc.clone();
+            let jh = thread::spawn(
+                move || {
+                    assert_eq!(data.dequeue(), 1);
+                    data.enqueue(1);
+                }
+            );
+            results.push(jh);
+        }
+
+        arc.enqueue(1);
+
+        for jh in results {
+            assert!(jh.join().is_ok());
+        }
+
+        assert_eq!(arc.dequeue(), 1);
     }
 }

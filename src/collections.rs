@@ -2,8 +2,12 @@ extern crate alloc;
 
 use self::alloc::raw_vec::RawVec;
 
+use std::mem;
 use std::ptr;
+use std::ptr::Shared;
+use std::boxed::Box;
 
+use std::clone::Clone;
 use std::cmp::PartialEq;
 use std::option::Option;
 
@@ -185,9 +189,6 @@ fn next_node_index(index: usize, mask: usize) -> usize {
     (index + 1) & mask
 }
 
-use std::boxed::Box;
-use std::mem;
-
 struct Node<T> {
     value: T,
     next: Option<Box<Node<T>>>
@@ -205,17 +206,17 @@ impl <T> Node<T> {
 
 pub struct UnboundedBlockingQueue<T> {
     head: Option<Box<Node<T>>>,
-    tail: *mut Node<T>,
+    tail: Option<Shared<Node<T>>>,
     size: usize
 }
 
-impl <T: PartialEq> UnboundedBlockingQueue<T> {
+impl <T: PartialEq + Clone> UnboundedBlockingQueue<T> {
 
     pub fn new() -> UnboundedBlockingQueue<T> {
         UnboundedBlockingQueue {
             size: 0,
             head: None,
-            tail: ptr::null_mut()
+            tail: None
         }
     }
 
@@ -231,27 +232,25 @@ impl <T: PartialEq> UnboundedBlockingQueue<T> {
         self.size += 1;
         let mut new_tail = Box::new(Node::new(val));
         let raw_tail: *mut _ = &mut *new_tail;
-        if !self.tail.is_null() {
-            unsafe {
-                (* self.tail).next = Some(new_tail);
-            }
+        match self.tail {
+            Some(ref mut share) => unsafe { share.as_mut().map(|node| { node.next = Some(new_tail) }); },
+            None => self.head = Some(new_tail),
         }
-        else {
-            self.head = Some(new_tail);
-        }
-        self.tail = raw_tail;
+        self.tail = unsafe { Some(Shared::new(raw_tail)) }
     }
 
-    pub fn dequeue(&mut self) -> Option<T> {
+    pub fn dequeue(&mut self) -> T {
         self.size -= 1;
-        self.head.take().map(|head| {
-            let head = *head;
-            self.head = head.next;
-            if self.head.is_none() {
-                self.tail = ptr::null_mut();
+        self.head.take().map(
+            |head| {
+                let head = *head;
+                self.head = head.next;
+                if self.head.is_none() {
+                    self.tail = None;
+                }
+                head.value
             }
-            head.value
-        })
+        ).unwrap()
     }
 
     pub fn contains(&self, val: T) -> bool {
@@ -269,9 +268,6 @@ impl <T: PartialEq> UnboundedBlockingQueue<T> {
                         },
                         None => break,
                     }
-                    if find {
-                        break;
-                    }
                 }
                 find
             },
@@ -284,7 +280,10 @@ impl <T: PartialEq> UnboundedBlockingQueue<T> {
         true
     }
 
-    pub fn peek(&self) -> Option<&T> {
-        self.head.as_ref().map(|node| { &node.value })
+    pub fn peek(&self) -> Option<T> {
+        match self.head {
+            Some(ref node) => Some(node.value.clone()),
+            None => None,
+        }
     }
 }

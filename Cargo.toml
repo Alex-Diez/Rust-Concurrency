@@ -1,5 +1,5 @@
 [package]
-name        = "rust-concurrent"
+name        = "concrust"
 version     = "0.0.2"
 authors     = ["Alex-Diez <alexvic.amatory@gmail.com>"]
 readme      = "README.md"
