@@ -188,19 +188,25 @@ fn next_node_index(index: usize, mask: usize) -> usize {
     (index + 1) & mask
 }
 
+use std::sync::atomic::{AtomicUsize,Ordering};
+
 struct Node<T> {
-    value: T,
-    next: BoxLink<T>
+    value: Option<T>,
+    next: Option<BoxLink<T>>
 }
 
 impl <T> Node<T> {
 
-    fn new(value: T) -> Node<T> {
-        Node { value: value, next: None }
+    fn some(value: T) -> Node<T> {
+        Node { value: Some(value), next: None }
+    }
+
+    fn empty() -> Node<T> {
+        Node { value: None, next: None }
     }
     
-    fn box_link(value: T) -> Box<Node<T>> {
-        Box::new(Node::new(value))
+    fn box_link(node: Node<T>) -> Box<Node<T>> {
+        Box::new(node)
     }
 
     fn share_link(ptr: *mut Node<T>) -> Shared<Node<T>> {
@@ -208,89 +214,102 @@ impl <T> Node<T> {
     }
 }
 
-type BoxLink<T> = Option<Box<Node<T>>>;
-type ShareLink<T> = Option<Shared<Node<T>>>;
+type BoxLink<T> = Box<Node<T>>;
+type ShareLink<T> = Shared<Node<T>>;
 
 pub struct UnboundedBlockingQueue<T> {
-    head: BoxLink<T>,
-    tail: ShareLink<T>,
-    size: usize
+    head: Mutex<BoxLink<T>>,
+    tail: Mutex<ShareLink<T>>,
+    size: AtomicUsize,
+    empty: Condvar
 }
 
 impl <T: PartialEq + Clone> UnboundedBlockingQueue<T> {
 
     pub fn new() -> UnboundedBlockingQueue<T> {
+        let mut empty = Node::box_link(Node::empty());
+        let raw_node: *mut _ = &mut *empty;
         UnboundedBlockingQueue {
-            size: 0,
-            head: None,
-            tail: None
+            size: AtomicUsize::new(0),
+            head: Mutex::new(empty),
+            tail: Mutex::new(Node::share_link(raw_node)),
+            empty: Condvar::new()
         }
     }
 
     pub fn size(&self) -> usize {
-        self.size
+        self.size.load(Ordering::Relaxed)
     }
 
     pub fn is_empty(&self) -> bool {
         self.size() == 0
     }
 
-    pub fn enqueue(&mut self, val: T) {
-        self.size += 1;
-        let mut new_tail = Node::box_link(val);
-        let raw_tail: *mut _ = &mut *new_tail;
-        match self.tail {
-            Some(ref mut share) => unsafe { share.as_mut().map(|node| { node.next = Some(new_tail) }); },
-            None => self.head = Some(new_tail),
+    pub fn enqueue(&self, val: T) {
+        let mut put_lock = self.tail.lock().unwrap();
+        let mut new_tail = Node::box_link(Node::some(val));
+        match unsafe { (*put_lock).as_mut() } {
+            Some(ref mut node) => {
+                let raw_tail: *mut _ = &mut *new_tail;
+                node.next = Some(new_tail);
+                *put_lock = Node::share_link(raw_tail);
+            },
+            None => *put_lock = Node::share_link(&mut *new_tail)
         }
-        self.tail = Some(Node::share_link(raw_tail))
+        let current_size = self.size.fetch_add(1, Ordering::Relaxed);
+        if current_size > 0 {
+            self.empty.notify_all();
+        }
     }
 
-    pub fn dequeue(&mut self) -> T {
-        self.size -= 1;
-        self.head.take().map(
-            |head| {
-                let head = *head;
-                self.head = head.next;
-                if self.head.is_none() {
-                    self.tail = None;
-                }
-                head.value
+    pub fn dequeue(&self) -> T {
+        let mut poll_lock = self.head.lock().unwrap();
+        while self.is_empty() {
+            poll_lock = self.empty.wait(poll_lock).unwrap();
+        }
+        let val = (*poll_lock).value.take().unwrap();
+        unsafe {
+            match (**poll_lock).next {
+                Some(node) => *poll_lock = node,
+                None => *poll_lock = Node::box_link(Node::empty()),
             }
-        ).unwrap()
+        }
+        let cnt = self.size.fetch_sub(1, Ordering::Relaxed);
+        val
     }
 
     pub fn contains(&self, val: T) -> bool {
-        match self.head {
-            Some(ref head) => {
-                let mut node = head;
-                let mut find = false;
-                loop {
-                    if (*node).value == val {
+        let mut head_lock = self.head.lock().unwrap();
+        let tail_lock = self.tail.lock().unwrap();
+        let mut node = **head_lock;
+        let mut find = false;
+        loop {
+            match node.value {
+                Some(node_val) => {
+                    if node_val == val {
                         find = true;
+                        break;
                     }
-                    match (*node).next {
-                        Some(ref next) => {
-                            node = next;
-                        },
-                        None => break,
-                    }
-                }
-                find
-            },
-            None => false
+                },
+                None => {},
+            }
+            match node.next {
+                Some(ref next) => {
+                    node = **next;
+                },
+                None => break,
+            }
         }
+        find
     }
 
-    pub fn offer(&mut self, val: T) -> bool {
+    pub fn offer(&self, val: T) -> bool {
         self.enqueue(val);
         true
     }
 
     pub fn peek(&self) -> Option<T> {
-        match self.head {
-            Some(ref node) => Some(node.value.clone()),
-            None => None,
-        }
+        let head_lock = self.head.lock().unwrap();
+        (*head_lock).value
     }
 }

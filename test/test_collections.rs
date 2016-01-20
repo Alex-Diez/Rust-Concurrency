@@ -304,7 +304,7 @@ describe! unbounded_blocking_queue_test {
         assert_eq!(queue.peek(), Some(1));
     }
 
-    /*it "should wait when queue is empty" {
+    it "should wait when queue is empty" {
         const NUMBER_OF_THREADS: usize = 10;
         let arc = Arc::new(queue);
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
@@ -327,5 +327,5 @@ describe! unbounded_blocking_queue_test {
         }
 
         assert_eq!(arc.dequeue(), 1);
-    }*/
+    }
 }
