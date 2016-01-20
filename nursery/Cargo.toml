@@ -1,16 +1,15 @@
 [package]
-name        = "concrust"
+name        = "nursery"
 version     = "0.0.2"
 authors     = ["Alex-Diez <alexvic.amatory@gmail.com>"]
 readme      = "README.md"
 exclude     = [
   ".gitignore",
-  "nursery/**/*"
+  "test/**/*",
 ]
 
 [lib]
-name = "concurrent"
-path = "src/lib.rs"
+name="nursery"
 
 [[test]]
 name = "test"

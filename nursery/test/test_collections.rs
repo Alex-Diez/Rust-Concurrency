@@ -1,7 +1,7 @@
-extern crate concurrent;
+extern crate nursery;
 
-pub use self::concurrent::collections::BoundedBlockingQueue;
-pub use self::concurrent::collections::UnboundedBlockingQueue;
+pub use self::nursery::collections::BoundedBlockingQueue;
+pub use self::nursery::collections::UnboundedBlockingQueue;
 
 pub use std::sync::Arc;
 pub use std::sync::atomic::{AtomicBool, Ordering};

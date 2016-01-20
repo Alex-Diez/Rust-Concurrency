@@ -97,6 +97,7 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
     }
 }
 
+/// some docs here
 pub struct BoundedBlockingQueue<T> {
     mutex: Mutex<BoundedBlockingQueueState<T>>,
     empty: Condvar,
@@ -186,9 +187,7 @@ fn round_up_to_next_highest_power_of_two(mut v: usize) -> usize {
 
 fn next_node_index(index: usize, mask: usize) -> usize {
     (index + 1) & mask
-}
-
-use std::sync::atomic::{AtomicUsize,Ordering};
+}use std::sync::atomic::{AtomicUsize,Ordering};
 
 struct Node<T> {
     value: Option<T>,

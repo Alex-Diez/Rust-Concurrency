@@ -1,7 +1,7 @@
-extern crate concurrent;
+extern crate nursery;
 
-pub use self::concurrent::primitives::CountDownLatch;
-pub use self::concurrent::primitives::Semaphore;
+pub use self::nursery::primitives::CountDownLatch;
+pub use self::nursery::primitives::Semaphore;
 
 pub use std::thread;
 pub use std::sync::Arc;
