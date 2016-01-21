@@ -18,3 +18,7 @@ path = "test/lib.rs"
 
 [dependencies]
 stainless = { git = "https://github.com/reem/stainless.git" }
+
+[dependencies.nursery]
+path = "nursery"
+version = "0.0.2"

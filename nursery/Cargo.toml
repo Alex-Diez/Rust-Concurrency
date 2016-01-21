@@ -2,11 +2,6 @@
 name        = "nursery"
 version     = "0.0.2"
 authors     = ["Alex-Diez <alexvic.amatory@gmail.com>"]
-readme      = "README.md"
-exclude     = [
-  ".gitignore",
-  "test/**/*",
-]
 
 [lib]
 name="nursery"

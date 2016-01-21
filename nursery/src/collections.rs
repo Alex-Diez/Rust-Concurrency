@@ -2,15 +2,23 @@ extern crate alloc;
 
 use self::alloc::raw_vec::RawVec;
 
+use std::mem;
 use std::ptr;
-use std::ptr::Shared;
+
 use std::boxed::Box;
 
-use std::clone::Clone;
 use std::cmp::PartialEq;
+
 use std::option::Option;
 
-use std::sync::{Mutex, Condvar};
+use std::ops::Deref;
+use std::ops::DerefMut;
+
+use std::clone::Clone;
+use std::marker::Copy;
+
+use std::sync::{Mutex, MutexGuard, Condvar};
+use std::sync::atomic::{AtomicUsize,Ordering};
 
 struct BoundedBlockingQueueState<T> {
     head: usize,
@@ -97,7 +105,6 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
     }
 }
 
-/// some docs here
 pub struct BoundedBlockingQueue<T> {
     mutex: Mutex<BoundedBlockingQueueState<T>>,
     empty: Condvar,
@@ -187,51 +194,83 @@ fn round_up_to_next_highest_power_of_two(mut v: usize) -> usize {
 
 fn next_node_index(index: usize, mask: usize) -> usize {
     (index + 1) & mask
-}use std::sync::atomic::{AtomicUsize,Ordering};
+}
 
 struct Node<T> {
     value: Option<T>,
-    next: Option<BoxLink<T>>
+    next: Option<Link<T>>
 }
 
 impl <T> Node<T> {
 
-    fn some(value: T) -> Node<T> {
-        Node { value: Some(value), next: None }
-    }
-
     fn empty() -> Node<T> {
-        Node { value: None, next: None }
-    }
-    
-    fn box_link(node: Node<T>) -> Box<Node<T>> {
-        Box::new(node)
+        Node {
+            value: None,
+            next: None
+        }
     }
 
-    fn share_link(ptr: *mut Node<T>) -> Shared<Node<T>> {
-        unsafe { Shared::new(ptr) }
+    fn non_empty(value: T) -> Node<T> {
+        Node {
+            value: Some(value),
+            next: None
+        }
     }
 }
 
-type BoxLink<T> = Box<Node<T>>;
-type ShareLink<T> = Shared<Node<T>>;
+struct Link<T> {
+    ptr: *mut Node<T>
+}
+
+impl <T> Link<T> {
+
+    fn new(node: Node<T>) -> Link<T> {
+        Link {
+            ptr: Box::into_raw(Box::new(node))
+        }
+    }
+}
+
+impl <T> Deref for Link<T> {
+    type Target = Node<T>;
+
+    fn deref(&self) -> &Node<T> {
+        unsafe { mem::transmute(self.ptr) }
+    }
+}
+
+impl <T> DerefMut for Link<T> {
+
+    fn deref_mut(&mut self) -> &mut Node<T> {
+        unsafe { mem::transmute(self.ptr) }
+    }
+}
+
+impl<T> Clone for Link<T> {
+
+    fn clone(&self) -> Link<T> {
+        Link { ptr: self.ptr }
+    }
+}
+
+impl <T> Copy for Link<T> { }
+unsafe impl <T: Send> Send for Link<T> { }
 
 pub struct UnboundedBlockingQueue<T> {
-    head: Mutex<BoxLink<T>>,
-    tail: Mutex<ShareLink<T>>,
+    head: Mutex<Link<T>>,
+    tail: Mutex<Link<T>>,
     size: AtomicUsize,
     empty: Condvar
 }
 
-impl <T: PartialEq + Clone> UnboundedBlockingQueue<T> {
+impl <T: PartialEq> UnboundedBlockingQueue<T> {
 
     pub fn new() -> UnboundedBlockingQueue<T> {
-        let mut empty = Node::box_link(Node::empty());
-        let raw_node: *mut _ = &mut *empty;
+        let empty = Link::new(Node::empty());
         UnboundedBlockingQueue {
             size: AtomicUsize::new(0),
             head: Mutex::new(empty),
-            tail: Mutex::new(Node::share_link(raw_node)),
+            tail: Mutex::new(empty),
             empty: Condvar::new()
         }
     }
@@ -245,60 +284,30 @@ impl <T: PartialEq + Clone> UnboundedBlockingQueue<T> {
     }
 
     pub fn enqueue(&self, val: T) {
-        let mut put_lock = self.tail.lock().unwrap();
-        let mut new_tail = Node::box_link(Node::some(val));
-        match unsafe { (*put_lock).as_mut() } {
-            Some(ref mut node) => {
-                let raw_tail: *mut _ = &mut *new_tail;
-                node.next = Some(new_tail);
-                *put_lock = Node::share_link(raw_tail);
-            },
-            None => *put_lock = Node::share_link(&mut *new_tail)
-        }
+        let mut tail = self.tail.lock().unwrap();
+        put(Node::non_empty(val), &mut tail);
         let current_size = self.size.fetch_add(1, Ordering::Relaxed);
-        if current_size > 0 {
+        if current_size + 1 > 0 {
             self.empty.notify_all();
         }
     }
 
     pub fn dequeue(&self) -> T {
-        let mut poll_lock = self.head.lock().unwrap();
+        let mut head = self.head.lock().unwrap();
         while self.is_empty() {
-            poll_lock = self.empty.wait(poll_lock).unwrap();
+            head = self.empty.wait(head).unwrap();
         }
-        let val = (*poll_lock).value.take().unwrap();
-        unsafe {
-            match (**poll_lock).next {
-                Some(node) => *poll_lock = node,
-                None => *poll_lock = Node::box_link(Node::empty()),
-            }
-        }
-        let cnt = self.size.fetch_sub(1, Ordering::Relaxed);
+        let val = take(&mut head);
+        self.size.fetch_sub(1, Ordering::Relaxed);
         val
     }
 
     pub fn contains(&self, val: T) -> bool {
         let mut head_lock = self.head.lock().unwrap();
         let tail_lock = self.tail.lock().unwrap();
-        let mut node = **head_lock;
-        let mut find = false;
-        loop {
-            match node.value {
-                Some(node_val) => {
-                    if node_val == val {
-                        find = true;
-                        break;
-                    }
-                },
-                None => {},
-            }
-            match node.next {
-                Some(ref next) => {
-                    node = **next;
-                },
-                None => break,
-            }
-        }
+        let find = contains(val, &mut head_lock);
+        drop(tail_lock);
+        drop(head_lock);
         find
     }
 
@@ -308,7 +317,55 @@ impl <T: PartialEq + Clone> UnboundedBlockingQueue<T> {
     }
 
     pub fn peek(&self) -> Option<T> {
-        let head_lock = self.head.lock().unwrap();
-        (*head_lock).value
+        let mut head_lock = self.head.lock().unwrap();
+        get(&mut head_lock)
+    }
+}
+
+fn put<T: PartialEq>(node: Node<T>, last: &mut MutexGuard<Link<T>>) {
+    let link = Link::new(node);
+    (***last).next = Some(link);
+    **last = link;
+}
+
+fn take<T: PartialEq>(head: &mut MutexGuard<Link<T>>) -> T {
+    let h = **head;
+    let mut first = (*h).next.unwrap();
+    **head = first;
+    (*first).value.take().unwrap()
+}
+
+fn contains<T: PartialEq>(val: T, head: &mut MutexGuard<Link<T>>) -> bool {
+    let mut find = false;
+    let value = Some(val);
+    let mut node = **head;
+    loop {
+        if (*node).value == value {
+            find = true;
+            break;
+        }
+        node = match (*node).next {
+            Some(ref next) => *next,
+            None => break,
+        }
+    }
+    find
+}
+
+fn get<T: PartialEq>(head: &mut MutexGuard<Link<T>>) -> Option<T> {
+    let h = **head;
+    match (*h).next {
+        Some(mut val) => {
+            match (*val).value {
+                Some(ref mut val) => {
+                    let raw: *const _ = &mut *val;
+                    unsafe {
+                        Some(ptr::read(raw))
+                    }
+                },
+                None => None,
+            }
+        },
+        None => None,
     }
 }
