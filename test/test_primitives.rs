@@ -1,7 +1,7 @@
-extern crate nursery;
+extern crate concrust;
 
-pub use self::nursery::primitives::CountDownLatch;
-pub use self::nursery::primitives::Semaphore;
+pub use self::concrust::primitives::CountDownLatch;
+pub use self::concrust::primitives::Semaphore;
 
 pub use std::thread;
 pub use std::sync::Arc;
