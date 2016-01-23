@@ -1,3 +1,3 @@
 #![feature(alloc)]
 pub mod primitives;
-pub mod collections;
+pub mod queue;
