@@ -95,6 +95,8 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
     }
 }
 
+/// Bounded blocking queue is based on raw vector implementation
+/// Current implementation is based on one Mutex and two Condvars
 pub struct BoundedBlockingQueue<T> {
     mutex: Mutex<BoundedBlockingQueueState<T>>,
     empty: Condvar,
@@ -103,10 +105,13 @@ pub struct BoundedBlockingQueue<T> {
 
 impl <T: PartialEq> BoundedBlockingQueue<T> {
 
+    /// Create queue with default capacity
+    /// which is 16
     pub fn new() -> BoundedBlockingQueue<T> {
         BoundedBlockingQueue::with_capacity(16)
     }
 
+    /// Create new queue with specified capacity
     pub fn with_capacity(capacity: usize) -> BoundedBlockingQueue<T> {
         let capacity = round_up_to_next_highest_power_of_two(capacity);
         BoundedBlockingQueue {
@@ -116,11 +121,14 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         }
     }
 
+    /// Retrun remaning capacity for current queue
     pub fn remaning_capacity(&self) -> usize {
         let guard = self.mutex.lock().unwrap();
         guard.remaning_capacity()
     }
 
+    /// Enqueue value into queue
+    /// Could be blocked until dequeue event if queue is full
     pub fn enqueue(&self, val: T) {
         let mut guard = self.mutex.lock().unwrap();
         while guard.is_full() {
@@ -130,21 +138,26 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         self.empty.notify_all();
     }
 
+    /// Retrun size of current queue
     pub fn size(&self) -> usize {
         let guard = self.mutex.lock().unwrap();
         guard.size()
     }
 
+    /// Check if current queue is empty
     pub fn is_empty(&self) -> bool {
         let guard = self.mutex.lock().unwrap();
         guard.is_empty()
     }
 
+    /// Check if current queue contains specified value
     pub fn contains(&self, val: T) -> bool {
         let guard = self.mutex.lock().unwrap();
         guard.contains(val)
     }
 
+    /// Dequeue value from queue
+    /// Could be blocked until enqueue event if queue is empty
     pub fn dequeue(&self) -> T {
         let mut guard = self.mutex.lock().unwrap();
         while guard.is_empty() {
@@ -155,6 +168,9 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         val
     }
 
+    /// Offer value into queue
+    /// If queue is not full return true otherwise false
+    /// Notify threads which blocked on dequeue operation
     pub fn offer(&self, val: T) -> bool {
         let mut guard = self.mutex.lock().unwrap();
         if guard.enqueue(val) {
@@ -165,6 +181,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         }
     }
 
+    /// Peek queue head value without removing it from queue
     pub fn peek(&self) -> Option<T> {
         let guard = self.mutex.lock().unwrap();
         guard.peek()

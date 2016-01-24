@@ -76,6 +76,10 @@ impl<T> Clone for Link<T> {
 impl <T> Copy for Link<T> { }
 unsafe impl <T: Send> Send for Link<T> { }
 
+/// Unbounded Blocking Queue base on linked list
+/// 
+/// Currnet implementation based on two Mutex, for enqueue and dequeue operations,
+/// and one Condvar
 pub struct UnboundedBlockingQueue<T> {
     head: Mutex<Link<T>>,
     tail: Mutex<Link<T>>,
@@ -95,14 +99,18 @@ impl <T: PartialEq> UnboundedBlockingQueue<T> {
         }
     }
 
+    /// Current queue size
     pub fn size(&self) -> usize {
         self.size.load(Ordering::Relaxed)
     }
 
+    /// Return true if current queue is empty
     pub fn is_empty(&self) -> bool {
         self.size() == 0
     }
 
+    /// Enqueue value into queue
+    /// Notify all threads that wait for dequeue value from queue
     pub fn enqueue(&self, val: T) {
         let mut tail = self.tail.lock().unwrap();
         put(Node::non_empty(val), &mut tail);
@@ -112,6 +120,8 @@ impl <T: PartialEq> UnboundedBlockingQueue<T> {
         }
     }
 
+    /// Dequeue value from queue
+    /// Could be blocked on Condvar if queue is empty
     pub fn dequeue(&self) -> T {
         let mut head = self.head.lock().unwrap();
         while self.is_empty() {
@@ -122,6 +132,7 @@ impl <T: PartialEq> UnboundedBlockingQueue<T> {
         val
     }
 
+    /// Check if current queue contains value
     pub fn contains(&self, val: T) -> bool {
         let mut head_lock = self.head.lock().unwrap();
         let tail_lock = self.tail.lock().unwrap();
@@ -131,11 +142,14 @@ impl <T: PartialEq> UnboundedBlockingQueue<T> {
         find
     }
 
+    /// Offer value into queue
+    /// alwayes return true due to unobound capacity
     pub fn offer(&self, val: T) -> bool {
         self.enqueue(val);
         true
     }
 
+    /// Peek head of queue with out removing it from queue
     pub fn peek(&self) -> Option<T> {
         let mut head_lock = self.head.lock().unwrap();
         get(&mut head_lock)
