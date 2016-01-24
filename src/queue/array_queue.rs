@@ -10,6 +10,8 @@ use std::option::Option;
 
 use std::sync::{Mutex, Condvar};
 
+use super::super::round_up_to_next_highest_power_of_two;
+
 struct BoundedBlockingQueueState<T> {
     head: usize,
     tail: usize,
@@ -186,17 +188,6 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         let guard = self.mutex.lock().unwrap();
         guard.peek()
     }
-}
-
-fn round_up_to_next_highest_power_of_two(mut v: usize) -> usize {
-    v -= 1;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v += 1;
-    v
 }
 
 fn next_node_index(index: usize, mask: usize) -> usize {
