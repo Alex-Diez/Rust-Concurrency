@@ -1,6 +1,6 @@
 [package]
 name        = "concrust"
-version     = "0.0.2"
+version     = "0.0.1-SNAPSHOT"
 authors     = ["Alex-Diez <alexvic.amatory@gmail.com>"]
 readme      = "README.md"
 exclude     = [
