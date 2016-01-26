@@ -30,4 +30,36 @@ describe! hash_map_tests {
         map.insert(1, 1);
         assert!(!map.is_empty());
     }
+
+    it "should decrease size when remove from map" {
+        map.insert(1, 1);
+        map.remove(1);
+        assert!(map.is_empty());
+    }
+
+    it "should remove none if there is no such key" {
+        assert_eq!(map.remove(1), None);
+    }
+
+    it "should remove inserted value" {
+        map.insert(1, 10);
+        assert_eq!(map.remove(1), Some(10));
+    }
+
+    it "should not remove value that was not inserted into map" {
+        map.insert(1, 10);
+        let old_size = map.len();
+        assert_eq!(map.remove(2), None);
+        assert_eq!(map.len(), old_size);
+    }
+
+    it "should remove inserted values" {
+        map.insert(1, 10);
+        map.insert(2, 20);
+        map.insert(3, 30);
+
+        assert_eq!(map.remove(1), Some(10));
+        assert_eq!(map.remove(2), Some(20));
+        assert_eq!(map.remove(3), Some(30));
+    }
 }
