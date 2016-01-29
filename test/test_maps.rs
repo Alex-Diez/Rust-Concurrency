@@ -41,18 +41,18 @@ describe! hash_map_tests {
         assert_eq!(map.remove(1), None);
     }
 
-    ignore "should remove inserted value" {
+    it "should remove inserted value" {
         map.insert(1, 10);
         assert_eq!(map.remove(1), Some(10));
     }
 
-    ignore "should not remove value that was not inserted into map" {
+    it "should not remove value that was not inserted into map" {
         map.insert(1, 10);
         assert_eq!(map.remove(2), None);
         assert!(!map.is_empty());
     }
 
-    ignore "should remove inserted values" {
+    it "should remove inserted values" {
         map.insert(1, 10);
         map.insert(2, 20);
         map.insert(3, 30);
