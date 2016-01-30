@@ -85,6 +85,10 @@ impl Clone for Link{
 impl Copy for Link { }
 unsafe impl Send for Link { }
 
+/// A hash table supporting concurrency for insertions and deletions
+///
+/// Currnet implementation is non resizeble vector of Read-Write locks-buckets
+/// which resolve hash collisions with link to the next key value pair
 pub struct ConcurrentHashMap {
     table: Vec<RwLock<Link>>,
     size: AtomicUsize
@@ -92,10 +96,13 @@ pub struct ConcurrentHashMap {
 
 impl ConcurrentHashMap {
     
+    /// Create hash table with vector of locks-buckets with default size which is 16
     pub fn new() -> ConcurrentHashMap {
         ConcurrentHashMap::with_capacity(16)
     }
 
+    /// Create hash table with vector of locks-buckets with specified capacity which will be
+    /// increase if needed to next highest power of two
     pub fn with_capacity(capacity: usize) -> ConcurrentHashMap {
         let capacity = round_up_to_next_highest_power_of_two(capacity);
         let mut table = Vec::with_capacity(capacity);
@@ -108,18 +115,23 @@ impl ConcurrentHashMap {
         }
     }
 
+    /// Check if table is empty
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Return size of table
     pub fn len(&self) -> usize {
         self.size.load(Ordering::Relaxed)
     }
 
+    /// Return capacity of locks-buckets vector
     pub fn capacity(&self) -> usize {
         self.table.capacity()
     }
 
+    /// Insert key value pair into table 
+    /// or update value if specified key is already in table
     pub fn insert(&mut self, key: i32, val: i32) {
         let index = self.capacity() & key as usize;
         let mut guard = self.table[index].write().unwrap();
@@ -128,6 +140,8 @@ impl ConcurrentHashMap {
         }
     }
 
+    /// Remove specified key from table return value
+    /// or None if key wasn't in the table
     pub fn remove(&mut self, key: i32) -> Option<i32> {
         let index = self.capacity() & key as usize;
         let mut guard = self.table[index].write().unwrap();
