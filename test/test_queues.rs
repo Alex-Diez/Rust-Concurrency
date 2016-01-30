@@ -2,6 +2,7 @@ extern crate concrust;
 
 pub use self::concrust::queue::BoundedBlockingQueue;
 pub use self::concrust::queue::UnboundedBlockingQueue;
+pub use self::concrust::queue::BlockingQueue;
 
 pub use std::sync::Arc;
 pub use std::sync::atomic::{AtomicBool, Ordering};
@@ -24,7 +25,7 @@ describe! bounded_blocking_queue_test {
 
     it "should create a new empty queue" {
         assert!(queue.is_empty());
-        assert_eq!(queue.size(), 0);
+        assert_eq!(queue.len(), 0);
     }
 
     it "should have capacity that is always highest power of two" {
@@ -44,10 +45,9 @@ describe! bounded_blocking_queue_test {
     }
 
     it "should increase size when insert into queue" {
-        let old_size = queue.size();
         queue.enqueue(1);
 
-        assert_eq!(queue.size(), old_size + 1);
+        assert!(!queue.is_empty());
     }
 
     it "should contain value that was equeued" {
@@ -74,10 +74,10 @@ describe! bounded_blocking_queue_test {
 
     it "should decrise size when remove from queue" {
         queue.enqueue(1);
-        let old_size = queue.size();
 
         queue.dequeue();
-        assert_eq!(queue.size(), old_size - 1);
+
+        assert!(queue.is_empty());
     }
 
     it "should dequeue first enqueued value" {
@@ -195,23 +195,23 @@ describe! bounded_blocking_queue_test {
             assert!(jh.join().is_ok());
         }
 
-        assert_eq!(arc.size(), CAPACITY-2);
+        assert_eq!(arc.len(), CAPACITY-2);
     }
 }
 
-pub fn enqeue_times(times: i32, queue: &mut BoundedBlockingQueue<i32>) {
-    let size = queue.size();
+pub fn enqeue_times(times: i32, queue: &mut BlockingQueue<i32>) {
+    let size = queue.len();
     for i in 1..times {
         queue.enqueue(i);
-        assert_eq!(queue.size(), size + (i as usize));
+        assert_eq!(queue.len(), size + (i as usize));
     }
 }
 
-pub fn dequeue_times(times: i32, queue: &mut BoundedBlockingQueue<i32>) {
-    let size = queue.size();
+pub fn dequeue_times(times: i32, queue: &mut BlockingQueue<i32>) {
+    let size = queue.len();
     for i in 1..times {
         queue.dequeue();
-        assert_eq!(queue.size(), size - (i as usize));
+        assert_eq!(queue.len(), size - (i as usize));
     }
 }
 

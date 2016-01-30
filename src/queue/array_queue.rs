@@ -10,6 +10,7 @@ use std::option::Option;
 
 use std::sync::{Mutex, Condvar};
 
+use super::BlockingQueue;
 use super::super::round_up_to_next_highest_power_of_two;
 
 const MIN_CAPACITY: usize = 16;
@@ -139,10 +140,25 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         let guard = self.mutex.lock().unwrap();
         guard.remaning_capacity()
     }
+}
+
+impl <T: PartialEq> BlockingQueue<T> for BoundedBlockingQueue<T> {
+
+    /// Retrun size of current queue
+    fn len(&self) -> usize {
+        let guard = self.mutex.lock().unwrap();
+        guard.size()
+    }
+
+    /// Check if current queue is empty
+    fn is_empty(&self) -> bool {
+        let guard = self.mutex.lock().unwrap();
+        guard.is_empty()
+    }
 
     /// Enqueue value into queue
     /// Could be blocked until dequeue event if queue is full
-    pub fn enqueue(&self, val: T) {
+    fn enqueue(&self, val: T) {
         let mut guard = self.mutex.lock().unwrap();
         while guard.is_full() {
             guard = self.full.wait(guard).unwrap();
@@ -151,27 +167,9 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         self.empty.notify_all();
     }
 
-    /// Retrun size of current queue
-    pub fn size(&self) -> usize {
-        let guard = self.mutex.lock().unwrap();
-        guard.size()
-    }
-
-    /// Check if current queue is empty
-    pub fn is_empty(&self) -> bool {
-        let guard = self.mutex.lock().unwrap();
-        guard.is_empty()
-    }
-
-    /// Check if current queue contains specified value
-    pub fn contains(&self, val: T) -> bool {
-        let guard = self.mutex.lock().unwrap();
-        guard.contains(val)
-    }
-
     /// Dequeue value from queue
     /// Could be blocked until enqueue event if queue is empty
-    pub fn dequeue(&self) -> T {
+    fn dequeue(&self) -> T {
         let mut guard = self.mutex.lock().unwrap();
         while guard.is_empty() {
             guard = self.empty.wait(guard).unwrap();
@@ -181,10 +179,16 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         val
     }
 
+    /// Check if current queue contains specified value
+    fn contains(&self, val: T) -> bool {
+        let guard = self.mutex.lock().unwrap();
+        guard.contains(val)
+    }
+
     /// Offer value into queue
     /// If queue is not full return true otherwise false
     /// Notify threads which blocked on dequeue operation
-    pub fn offer(&self, val: T) -> bool {
+    fn offer(&self, val: T) -> bool {
         let mut guard = self.mutex.lock().unwrap();
         if guard.enqueue(val) {
             self.empty.notify_all();
@@ -195,7 +199,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
     }
 
     /// Peek queue head value without removing it from queue
-    pub fn peek(&self) -> Option<T> {
+    fn peek(&self) -> Option<T> {
         let guard = self.mutex.lock().unwrap();
         guard.peek()
     }
