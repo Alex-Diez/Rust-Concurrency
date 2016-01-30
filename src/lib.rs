@@ -1,5 +1,7 @@
 #![feature(alloc)]
-#![feature(shared)]
+#![feature(plugin)]
+
+#![plugin(clippy)]
 
 pub mod primitives;
 pub mod queue;

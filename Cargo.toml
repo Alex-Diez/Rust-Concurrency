@@ -20,3 +20,5 @@ path = "test/lib.rs"
 git = "https://github.com/Alex-Diez/stainless.git"
 branch = "ignore_tests"
 
+[dependencies]
+clippy = "0.0.37"

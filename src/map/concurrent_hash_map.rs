@@ -157,17 +157,8 @@ impl ConcurrentHashMap {
 fn put(key: i32, val: i32, guard: &mut RwLockWriteGuard<Link>) -> bool {
     let contains = contains(key, guard);
     if contains {
-        let mut link = **guard;
-        loop {
-            if (*link).key == Some(key) {
-                link.value = Some(val);
-                break;
-            }
-            match (*link).next {
-                Some(next) => link = next,
-                None => break,
-            }
-        }
+        let mut link = iterate(key, guard);
+        link.value = Some(val);
     }
     else {
         let mut new_bucket = Link::new(Bucket::new(key, val));
@@ -179,34 +170,28 @@ fn put(key: i32, val: i32, guard: &mut RwLockWriteGuard<Link>) -> bool {
 }
 
 fn contains(key: i32, guard: &RwLockWriteGuard<Link>) -> bool {
-    let mut link = **guard;
-    loop {
-        if (*link).key == Some(key) {
-            return true;
-        }
-        match (*link).next {
-            Some(next) => link = next,
-            None => return false,
-        }
-    }
+    (*iterate(key, guard)).key == Some(key)
 }
 
 fn take(key: i32, guard: &mut RwLockWriteGuard<Link>) -> Option<i32> {
-    let mut link = **guard;
-    if !link.ptr.is_null() {
-        loop {
-            if (*link).key == Some(key) {
-                match (*link).next {
-                    Some(next) => link.next = next.next,
-                    None => link.ptr = ptr::null_mut(),
-                }
-                return (*link).value;
-            }
-            match (*link).next {
-                Some(next) => link = next,
-                None => break,
-            }
+    let contains = contains(key, guard);
+    if contains {
+        let mut link = iterate(key, guard);
+        match (*link).next {
+            Some(next) => link.next = next.next,
+            None => link.ptr = ptr::null_mut(),
         }
+        (*link).value
     }
-    None
+    else {
+        None
+    }
+}
+
+fn iterate(key: i32, guard: &RwLockWriteGuard<Link>) -> Link {
+    let mut link = **guard;
+    while (*link).key != Some(key) && (*link).next.is_some() {
+        link = (*link).next.unwrap();
+    }
+    link
 }

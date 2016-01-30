@@ -1,5 +1,8 @@
-#![feature(const_fn,plugin)]
+#![feature(const_fn)]
+#![feature(plugin)]
+
 #![plugin(stainless)]
+#![plugin(clippy)]
 
 extern crate concrust;
 
