@@ -12,6 +12,8 @@ use std::sync::{Mutex, Condvar};
 
 use super::super::round_up_to_next_highest_power_of_two;
 
+const MIN_CAPACITY: usize = 16;
+
 struct BoundedBlockingQueueState<T> {
     head: usize,
     tail: usize,
@@ -21,13 +23,18 @@ struct BoundedBlockingQueueState<T> {
 impl <T: PartialEq> BoundedBlockingQueueState<T> {
 
     fn new(capacity: usize) -> BoundedBlockingQueueState<T> {
-        let capacity = round_up_to_next_highest_power_of_two(capacity);
+        let capacity = if capacity < MIN_CAPACITY {
+            MIN_CAPACITY
+        }
+        else {
+            round_up_to_next_highest_power_of_two(capacity)
+        };
         BoundedBlockingQueueState { head: 0, tail: 0, data: RawVec::with_capacity(capacity) }
     }
 
     #[inline]
     fn remaning_capacity(&self) -> usize {
-        self.data.cap() - self.size() - 1
+        self.data.cap() - self.size()
     }
 
     #[inline]
@@ -95,6 +102,10 @@ impl <T: PartialEq> BoundedBlockingQueueState<T> {
             }
         }
     }
+}
+
+fn next_node_index(index: usize, mask: usize) -> usize {
+    (index + 1) & mask
 }
 
 /// Bounded blocking queue is based on raw vector implementation
@@ -188,8 +199,4 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
         let guard = self.mutex.lock().unwrap();
         guard.peek()
     }
-}
-
-fn next_node_index(index: usize, mask: usize) -> usize {
-    (index + 1) & mask
 }
