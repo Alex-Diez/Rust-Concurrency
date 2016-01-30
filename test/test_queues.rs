@@ -14,7 +14,7 @@ describe! bounded_blocking_queue_test {
 
     before_each {
         const CAPACITY : usize = 16;
-        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(CAPACITY);
+        let mut queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(CAPACITY);
     }
 
     it "should create a new queue with default capacity" {
@@ -105,53 +105,17 @@ describe! bounded_blocking_queue_test {
     }
 
     it "should calculate correct size when alot insertions and deletions" {
-        let size = queue.size();
-        for i in 1..8 {
-            queue.enqueue(i);
-            assert_eq!(queue.size(), size + (i as usize));
-        }
+        enqeue_times(8, &mut queue);
+        dequeue_times(6, &mut queue);
 
-        let size = queue.size();
-        for i in 1..6 {
-            queue.dequeue();
-            assert_eq!(queue.size(), size - (i as usize));
-        }
+        enqeue_times(8, &mut queue);
+        dequeue_times(6, &mut queue);
 
-        let size = queue.size();
-        for i in 1..8 {
-            queue.enqueue(i);
-            assert_eq!(queue.size(), size + (i as usize));
-        }
+        enqeue_times(8, &mut queue);
+        dequeue_times(6, &mut queue);
 
-        let size = queue.size();
-        for i in 1..6 {
-            queue.dequeue();
-            assert_eq!(queue.size(), size - (i as usize));
-        }
-
-        let size = queue.size();
-        for i in 1..8 {
-            queue.enqueue(i);
-            assert_eq!(queue.size(), size + (i as usize));
-        }
-
-        let size = queue.size();
-        for i in 1..6 {
-            queue.dequeue();
-            assert_eq!(queue.size(), size - (i as usize));
-        }
-
-        let size = queue.size();
-        for i in 1..8 {
-            queue.enqueue(i);
-            assert_eq!(queue.size(), size + (i as usize));
-        }
-
-        let size = queue.size();
-        for i in 1..6 {
-            queue.dequeue();
-            assert_eq!(queue.size(), size - (i as usize));
-        }
+        enqeue_times(8, &mut queue);
+        dequeue_times(6, &mut queue);
     }
 
     it "should wait when queue is empty" {
@@ -232,6 +196,22 @@ describe! bounded_blocking_queue_test {
         }
 
         assert_eq!(arc.size(), CAPACITY-2);
+    }
+}
+
+pub fn enqeue_times(times: i32, queue: &mut BoundedBlockingQueue<i32>) {
+    let size = queue.size();
+    for i in 1..times {
+        queue.enqueue(i);
+        assert_eq!(queue.size(), size + (i as usize));
+    }
+}
+
+pub fn dequeue_times(times: i32, queue: &mut BoundedBlockingQueue<i32>) {
+    let size = queue.size();
+    for i in 1..times {
+        queue.dequeue();
+        assert_eq!(queue.size(), size - (i as usize));
     }
 }
 
