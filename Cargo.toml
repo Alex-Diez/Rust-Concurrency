@@ -4,8 +4,7 @@ version     = "0.0.1-SNAPSHOT"
 authors     = ["Alex-Diez <alexvic.amatory@gmail.com>"]
 readme      = "README.md"
 exclude     = [
-  ".gitignore",
-  "nursery/**/*"
+	".gitignore"
 ]
 
 [lib]
@@ -22,3 +21,4 @@ branch = "ignore_tests"
 
 [dependencies]
 clippy = "0.0.37"
+expectest = "0.4.1"
