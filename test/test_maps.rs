@@ -1,6 +1,4 @@
-extern crate concrust;
-
-pub use self::concrust::map::ConcurrentHashMap;
+pub use concrust::map::ConcurrentHashMap;
 
 describe! hash_map_tests {
 

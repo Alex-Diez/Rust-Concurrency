@@ -7,6 +7,8 @@ pub use std::thread;
 pub use std::sync::Arc;
 pub use std::time::Duration;
 
+pub use expectest::prelude::{be_equal_to, be_greater_than, be_ok, be_none, be_some};
+
 describe! count_down_latch_prim {
 
     before_each {
@@ -17,7 +19,7 @@ describe! count_down_latch_prim {
         let counts = latch.get_counts();
         latch.count_down();
 
-        assert_eq!(latch.get_counts(), counts - 1);
+        expect!(latch.get_counts()).to(be_equal_to(counts - 1));
     }
 
     it "should await until counts not equals zero" {
@@ -29,11 +31,11 @@ describe! count_down_latch_prim {
             let count_down_latch = arc.clone();
             let jh = thread::spawn(
                 move || {
-                    assert!(count_down_latch.get_counts() > 0);
+                    expect!(count_down_latch.get_counts()).to(be_greater_than(0));
 
                     count_down_latch.await();
 
-                    assert!(count_down_latch.get_counts() == 0);
+                    expect!(count_down_latch.get_counts()).to(be_equal_to(0));
                 }
             );
             results.push(jh);
@@ -43,10 +45,9 @@ describe! count_down_latch_prim {
 
         arc.count_down();
 
-        assert_eq!(arc.get_counts(), 0);
+        expect!(arc.get_counts()).to(be_equal_to(0));
         for jh in results {
-            let res = jh.join();
-            assert!(res.is_ok());
+            expect!(jh.join()).to(be_ok());
         }
     }
 }
@@ -61,21 +62,22 @@ describe! semaphore_prim {
         {
             let guard = semaphore.acquire();
             let try_acquire = semaphore.try_acquire();
-            assert!(try_acquire.is_none());
+            expect!(try_acquire).to(be_none());
             drop(guard);
         }
 
         let try_acquire = semaphore.try_acquire();
-        assert!(try_acquire.is_some());
+        expect!(try_acquire).to(be_some());
     }
 
     it "should not release more than permissions" {
         semaphore.release();
         let try_acquire = semaphore.try_acquire();
         assert!(try_acquire.is_some());
+       // expect!(try_acquire).to(be_some());
 
         let try_acquire = semaphore.try_acquire();
-        assert!(try_acquire.is_none());
+        expect!(try_acquire).to(be_none());
     }
 
     it "should block thread until resource will be released" {
@@ -100,8 +102,7 @@ describe! semaphore_prim {
         arc.release();
 
         for jh in results {
-            let res = jh.join();
-            assert!(res.is_ok());
+            expect!(jh.join()).to(be_ok());
         }
     }
 }

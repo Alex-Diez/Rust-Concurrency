@@ -1,6 +1,7 @@
 use std::sync::{Condvar, Mutex};
 use std::ops::Drop;
 use std::option::Option;
+use std::fmt::{Debug, Formatter, Result};
 
 struct LatchStatus {
     counts: usize
@@ -75,6 +76,13 @@ impl <'owner> Drop for SemaphoreGuard<'owner> {
 
     fn drop(&mut self) {
         self.lock.release();
+    }
+}
+
+impl <'owner> Debug for SemaphoreGuard<'owner> {
+
+    fn fmt(&self, fmt: &mut Formatter) -> Result {
+        write!(fmt, "[Semaphore Guard]")
     }
 }
 
