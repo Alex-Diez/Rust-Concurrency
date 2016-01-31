@@ -1,16 +1,46 @@
-use std::sync::{Condvar, Mutex};
+use std::sync::{Condvar, Mutex, Arc};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use std::ops::Drop;
+
 use std::option::Option;
+
 use std::fmt::{Debug, Formatter, Result};
 
-struct LatchStatus {
-    counts: usize
+struct LatchInner {
+    mutex: Mutex<()>,
+    counts: AtomicUsize,
+    condition: Condvar
 }
 
-impl LatchStatus {
+impl LatchInner {
 
-    pub fn new(counts: usize) -> LatchStatus {
-        LatchStatus { counts: counts }
+    fn new(counts: usize) -> LatchInner {
+        LatchInner {
+            mutex: Mutex::new(()),
+            counts: AtomicUsize::new(counts),
+            condition: Condvar::new()
+        }
+    }
+
+    fn await(&self) {
+        let mut guard = self.mutex.lock().unwrap();
+        while self.get_counts() > 0 {
+            guard = self.condition.wait(guard).unwrap();
+        }
+    }
+
+    fn count_down(&self) {
+        let guard = self.mutex.lock().unwrap();
+        let count = self.counts.fetch_sub(1, Ordering::Relaxed);
+        if count == 1 {
+            self.condition.notify_all();
+        }
+        drop(guard);
+    }
+
+    fn get_counts(&self) -> usize {
+        self.counts.load(Ordering::Relaxed)
     }
 }
 
@@ -21,9 +51,9 @@ impl LatchStatus {
 /// method, after which all waiting threads are released and any subsequent 
 /// invocations of await return immediately. This is a one-shot phenomenon --
 /// the count cannot be reset.
+#[derive(Clone)]
 pub struct CountDownLatch {
-    sync: Mutex<LatchStatus>,
-    condition: Condvar
+    inner: Arc<LatchInner>
 }
 
 impl CountDownLatch {
@@ -31,31 +61,23 @@ impl CountDownLatch {
     /// Create new CountDownLatch with specified counts
     pub fn new(counts: usize) -> CountDownLatch {
         CountDownLatch {
-            sync: Mutex::new(LatchStatus::new(counts)),
-            condition: Condvar::new()
+            inner: Arc::new(LatchInner::new(counts))
         }
     }
 
     /// Block thread until number of counts is zero
     pub fn await(&self) {
-        let mut guard = self.sync.lock().unwrap();
-        while guard.counts > 0 {
-            guard = self.condition.wait(guard).unwrap();
-        }
+        self.inner.await();
     }
 
     /// Decrease number of counts on '1'
     pub fn count_down(&self) {
-        let mut guard = self.sync.lock().unwrap();
-        guard.counts -= 1;
-        if guard.counts == 0 {
-            self.condition.notify_all();
-        }
+        self.inner.count_down();
     }
 
     /// Get current number of counts
     pub fn get_counts(&self) -> usize {
-        self.sync.lock().unwrap().counts
+        self.inner.get_counts()
     }
 }
 

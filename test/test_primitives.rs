@@ -24,11 +24,10 @@ describe! count_down_latch_prim {
 
     it "should await until counts not equals zero" {
         const NUMBER_OF_THREADS: usize = 10;
-        let arc = Arc::new(latch);
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
 
         for _ in 0..NUMBER_OF_THREADS {
-            let count_down_latch = arc.clone();
+            let count_down_latch = latch.clone();
             let jh = thread::spawn(
                 move || {
                     expect!(count_down_latch.get_counts()).to(be_greater_than(0));
@@ -43,9 +42,9 @@ describe! count_down_latch_prim {
 
         thread::sleep(Duration::from_millis(100));
 
-        arc.count_down();
+        latch.count_down();
 
-        expect!(arc.get_counts()).to(be_equal_to(0));
+        expect!(latch.get_counts()).to(be_equal_to(0));
         for jh in results {
             expect!(jh.join()).to(be_ok());
         }
