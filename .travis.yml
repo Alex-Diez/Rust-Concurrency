@@ -29,8 +29,8 @@ before_script:
 
 script:
   - |
-      travis-cargo build
-      && travis-cargo test
+      travis-cargo build &&
+      travis-cargo test
 #      && travis-cargo bench
 
 after_success:
