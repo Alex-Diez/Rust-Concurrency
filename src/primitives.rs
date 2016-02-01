@@ -84,20 +84,20 @@ impl CountDownLatch {
 /// An RAII guard which will release a resource acquired from a semaphore 
 /// when dropped.
 pub struct SemaphoreGuard<'owner> {
-    lock: &'owner Semaphore
+    owner: &'owner SemaphoreInner
 }
 
 impl <'owner> SemaphoreGuard<'owner> {
     
-    pub fn new(semaphore: &'owner Semaphore) -> SemaphoreGuard<'owner> {
-        SemaphoreGuard { lock: semaphore }
+    fn new(inner: &'owner SemaphoreInner) -> SemaphoreGuard<'owner> {
+        SemaphoreGuard { owner: inner }
     }
 }
 
 impl <'owner> Drop for SemaphoreGuard<'owner> {
 
     fn drop(&mut self) {
-        self.lock.release();
+        self.owner.release();
     }
 }
 
@@ -108,18 +108,67 @@ impl <'owner> Debug for SemaphoreGuard<'owner> {
     }
 }
 
-struct SemaphoreState {
-    permissions: usize,
-    max_permissions: usize
+struct SemaphoreInner {
+    mutex: Mutex<()>,
+    permissions: AtomicUsize,
+    max_permissions: usize,
+    condition: Condvar
 }
 
-impl SemaphoreState {
+impl SemaphoreInner {
 
-    fn new(permissions: usize) -> SemaphoreState {
-        SemaphoreState {
-            permissions: permissions,
-            max_permissions: permissions
+    fn new(permissions: usize) -> SemaphoreInner {
+        SemaphoreInner {
+            mutex: Mutex::new(()),
+            permissions: AtomicUsize::new(permissions),
+            max_permissions: permissions,
+            condition: Condvar::new()
         }
+    }
+
+    fn acquire(&self) -> SemaphoreGuard {
+        let mut guard = self.mutex.lock().unwrap();
+        while self.get_permissions_number() < 1 {
+            guard = self.condition.wait(guard).unwrap();
+        }
+        self.decrease_permission();
+        SemaphoreGuard::new(self)
+    }
+
+    fn try_acquire(&self) -> Option<SemaphoreGuard> {
+        let try_guard = self.mutex.try_lock();
+        match try_guard {
+            Ok(_) => {
+                if self.get_permissions_number() > 0 {
+                    self.decrease_permission();
+                    Some(SemaphoreGuard::new(self))
+                } else {
+                    None
+                }
+            },
+            Err(_) => None,
+        }
+    }
+
+    fn release(&self) {
+        let guard = self.mutex.lock().unwrap();
+        if self.get_permissions_number() < self.max_permissions {
+            self.increase_permission();
+            self.condition.notify_all();
+        }
+        drop(guard);
+    }
+
+    fn get_permissions_number(&self) -> usize {
+        self.permissions.load(Ordering::Relaxed)
+    }
+
+    fn decrease_permission(&self) {
+        self.permissions.fetch_sub(1, Ordering::Relaxed);
+    }
+
+    fn increase_permission(&self) {
+        self.permissions.fetch_add(1, Ordering::Relaxed);
     }
 }
 
@@ -131,9 +180,9 @@ impl SemaphoreState {
 /// Semaphores are often used to restrict the number of threads than can access 
 /// some (physical or logical) resource. For example, here is a class that uses 
 /// a semaphore to control access to a pool of items:
+#[derive(Clone)]
 pub struct Semaphore {
-    sync: Mutex<SemaphoreState>,
-    condition: Condvar
+    inner: Arc<SemaphoreInner>
 }
 
 impl Semaphore {
@@ -141,45 +190,26 @@ impl Semaphore {
     /// Create new Semaphore with specified number of permissions
     pub fn new(permissions: usize) -> Semaphore {
         Semaphore {
-            sync: Mutex::new(SemaphoreState::new(permissions)),
-            condition: Condvar::new()
+            inner: Arc::new(SemaphoreInner::new(permissions))
         }
     }
 
     /// Acquire permission from Semaphore
     /// Block current thread if no permission left
     pub fn acquire(&self) -> SemaphoreGuard {
-        let mut lock = self.sync.lock().unwrap();
-        while lock.permissions < 1 {
-            lock = self.condition.wait(lock).unwrap();
-        }
-        lock.permissions -= 1;
-        SemaphoreGuard::new(self)
+        self.inner.acquire()
     }
 
     /// Try acquire permission
     /// Does not block thread
     pub fn try_acquire(&self) -> Option<SemaphoreGuard> {
-        let try_lock = self.sync.try_lock();
-        match try_lock {
-            Ok(mut d) => if d.permissions > 0 {
-                            d.permissions -= 1;
-                            Some(SemaphoreGuard::new(self))
-                        } else {
-                            None
-                        },
-            Err(_) => None,
-        }
+        self.inner.try_acquire()
     }
 
     /// Release Semaphore permission
     /// Notify all threads that wait for permission
     /// @see Semaphore::acquire
     pub fn release(&self) {
-        let mut lock = self.sync.lock().unwrap();
-        if lock.permissions < lock.max_permissions {
-            lock.permissions += 1;
-            self.condition.notify_all();
-        }
+        self.inner.release()
     }
 }

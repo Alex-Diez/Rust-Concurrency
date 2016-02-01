@@ -81,13 +81,12 @@ describe! semaphore_prim {
 
     it "should block thread until resource will be released" {
         const NUMBER_OF_THREADS: usize = 10;
-        let arc = Arc::new(semaphore);
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
 
-        arc.acquire();
+        semaphore.acquire();
 
         for _ in 0..NUMBER_OF_THREADS {
-            let semaphore = arc.clone();
+            let semaphore = semaphore.clone();
             let jh = thread::spawn(
                 move || {
                     let g = semaphore.acquire();
@@ -98,7 +97,7 @@ describe! semaphore_prim {
             results.push(jh);
         }
         thread::sleep(Duration::from_millis(50));
-        arc.release();
+        semaphore.release();
 
         for jh in results {
             expect!(jh.join()).to(be_ok());
