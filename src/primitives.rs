@@ -32,8 +32,8 @@ impl LatchInner {
 
     fn count_down(&self) {
         let guard = self.mutex.lock().unwrap();
-        let count = self.counts.fetch_sub(1, Ordering::Relaxed);
-        if count == 1 {
+        self.counts.fetch_sub(1, Ordering::Relaxed);
+        if self.get_counts() == 0 {
             self.condition.notify_all();
         }
         drop(guard);
