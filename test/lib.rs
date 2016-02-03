@@ -4,6 +4,9 @@
 #![plugin(stainless)]
 #![plugin(clippy)]
 
+// for stainless before_each
+#![allow(unused_mut, unused_variables)]
+
 extern crate concrust;
 #[macro_use(expect)]
 extern crate expectest;

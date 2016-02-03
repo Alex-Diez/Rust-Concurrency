@@ -15,22 +15,22 @@ use super::super::round_up_to_next_highest_power_of_two;
 
 const MIN_CAPACITY: usize = 16;
 
-struct BoundedBlockingQueueState<T> {
+struct ArrayBlockingQueueState<T> {
     head: usize,
     tail: usize,
     data: RawVec<T>
 }
 
-impl <T: PartialEq> BoundedBlockingQueueState<T> {
+impl <T: PartialEq> ArrayBlockingQueueState<T> {
 
-    fn new(capacity: usize) -> BoundedBlockingQueueState<T> {
+    fn new(capacity: usize) -> ArrayBlockingQueueState<T> {
         let capacity = if capacity < MIN_CAPACITY {
             MIN_CAPACITY
         }
         else {
             round_up_to_next_highest_power_of_two(capacity)
         };
-        BoundedBlockingQueueState { head: 0, tail: 0, data: RawVec::with_capacity(capacity) }
+        ArrayBlockingQueueState { head: 0, tail: 0, data: RawVec::with_capacity(capacity) }
     }
 
     #[inline]
@@ -111,25 +111,25 @@ fn next_node_index(index: usize, mask: usize) -> usize {
 
 /// Bounded blocking queue is based on raw vector implementation
 /// Current implementation is based on one Mutex and two Condvars
-pub struct BoundedBlockingQueue<T> {
-    mutex: Mutex<BoundedBlockingQueueState<T>>,
+pub struct ArrayBlockingQueue<T> {
+    mutex: Mutex<ArrayBlockingQueueState<T>>,
     empty: Condvar,
     full: Condvar
 }
 
-impl <T: PartialEq> BoundedBlockingQueue<T> {
+impl <T: PartialEq> ArrayBlockingQueue<T> {
 
     /// Create queue with default capacity
     /// which is 16
-    pub fn new() -> BoundedBlockingQueue<T> {
-        BoundedBlockingQueue::with_capacity(16)
+    pub fn new() -> ArrayBlockingQueue<T> {
+        ArrayBlockingQueue::with_capacity(16)
     }
 
     /// Create new queue with specified capacity
-    pub fn with_capacity(capacity: usize) -> BoundedBlockingQueue<T> {
+    pub fn with_capacity(capacity: usize) -> ArrayBlockingQueue<T> {
         let capacity = round_up_to_next_highest_power_of_two(capacity);
-        BoundedBlockingQueue {
-            mutex: Mutex::new(BoundedBlockingQueueState::new(capacity)),
+        ArrayBlockingQueue {
+            mutex: Mutex::new(ArrayBlockingQueueState::new(capacity)),
             empty: Condvar::new(),
             full: Condvar::new()
         }
@@ -142,7 +142,7 @@ impl <T: PartialEq> BoundedBlockingQueue<T> {
     }
 }
 
-impl <T: PartialEq> BlockingQueue<T> for BoundedBlockingQueue<T> {
+impl <T: PartialEq> BlockingQueue<T> for ArrayBlockingQueue<T> {
 
     /// Retrun size of current queue
     fn len(&self) -> usize {

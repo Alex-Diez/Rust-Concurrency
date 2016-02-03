@@ -1,4 +1,4 @@
-pub use concrust::queue::BoundedBlockingQueue;
+pub use concrust::queue::ArrayBlockingQueue;
 pub use concrust::queue::BlockingQueue;
 
 pub use std::sync::Arc;
@@ -14,11 +14,11 @@ describe! bounded_blocking_queue_test {
 
     before_each {
         const CAPACITY : usize = 16;
-        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(CAPACITY);
+        let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(CAPACITY);
     }
 
     it "should create a new queue with default capacity" {
-        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::new();
+        let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::new();
         expect!(queue.remaning_capacity()).to(be_equal_to(16));
     }
 
@@ -28,18 +28,18 @@ describe! bounded_blocking_queue_test {
     }
 
     it "should have capacity that is always highest power of two" {
-        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(10);
+        let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(10);
         expect!(queue.remaning_capacity()).to(be_equal_to(16));
 
-        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(20);
+        let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(20);
         expect!(queue.remaning_capacity()).to(be_equal_to(32));
 
-        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(40);
+        let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(40);
         expect!(queue.remaning_capacity()).to(be_equal_to(64));
     }
 
     it "should not have less then min capacity" {
-        let queue: BoundedBlockingQueue<i32> = BoundedBlockingQueue::with_capacity(6);
+        let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(6);
         expect!(queue.remaning_capacity()).to(be_equal_to(16));
     }
 

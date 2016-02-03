@@ -1,4 +1,4 @@
-pub use self::array_queue::BoundedBlockingQueue;
+pub use self::array_queue::ArrayBlockingQueue;
 pub use self::linked_queue::UnboundedBlockingQueue;
 
 mod array_queue;
