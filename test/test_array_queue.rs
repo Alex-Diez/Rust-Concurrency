@@ -49,10 +49,19 @@ describe! bounded_blocking_queue_test {
         expect!(queue.is_empty()).not_to(be_true());
     }
 
+    it "should have size be equal to capasity when is full" {
+        enqeue_times(CAPACITY as i32, &queue);
+        expect!(queue.len()).to(be_equal_to(CAPACITY));
+    }
+
     it "should contain value that was equeued" {
         queue.enqueue(1);
 
         expect!(queue.contains(1)).to(be_true());
+    }
+
+    it "should not contain value that was not enqueued" {
+        expect!(queue.contains(10)).to(be_false());
     }
 
     it "should contain values that were enqueued" {
@@ -67,16 +76,26 @@ describe! bounded_blocking_queue_test {
         expect!(queue.contains(40)).to(be_true());
     }
 
-    it "should not contain value that was not enqueued" {
-        expect!(queue.contains(10)).to(be_false());
-    }
-
     it "should decrise size when remove from queue" {
         queue.enqueue(1);
 
         queue.dequeue();
 
         expect!(queue.is_empty()).to(be_true());
+    }
+
+    it "should dequeue enqueued value" {
+        queue.enqueue(10);
+
+        expect!(queue.dequeue()).to(be_equal_to(10));
+
+        queue.enqueue(20);
+
+        expect!(queue.dequeue()).to(be_equal_to(20));
+
+        queue.enqueue(30);
+
+        expect!(queue.dequeue()).to(be_equal_to(30));
     }
 
     it "should dequeue first enqueued value" {
@@ -104,17 +123,39 @@ describe! bounded_blocking_queue_test {
     }
 
     it "should calculate correct size when alot insertions and deletions" {
-        enqeue_times(8, &queue);
-        dequeue_times(6, &queue);
+        for iter in 0..5 {
+            let size = queue.len();
+            enqeue_times(8, &queue);
+            expect!(queue.len()).to(be_equal_to(size + 8));
 
-        enqeue_times(8, &queue);
-        dequeue_times(6, &queue);
+            let size = queue.len();
+            dequeue_times(6, &queue);
+            expect!(queue.len()).to(be_equal_to(size - 6));
+        }
+    }
 
-        enqeue_times(8, &queue);
-        dequeue_times(6, &queue);
+    it "should enqueue dequeue more than capacity times" {
+        for i in 0..2*CAPACITY {
+            let elem = i as i32;
+            queue.enqueue(elem);
+            expect!(queue.dequeue()).to(be_equal_to(elem));
+        }
+    }
 
-        enqeue_times(8, &queue);
-        dequeue_times(6, &queue);
+    it "should accept offered value when queue is not full" {
+        for i in 0..CAPACITY {
+            let elem = i as i32;
+            expect!(queue.offer(elem)).to(be_true());
+        }
+    }
+
+    it "should reject offered value when queue is full" {
+        for i in 0..CAPACITY {
+            let elem = i as i32;
+            (queue.enqueue(elem));
+        }
+
+        expect!(queue.offer(1)).to(be_false());
     }
 
     it "should wait when queue is empty" {
@@ -167,8 +208,8 @@ describe! bounded_blocking_queue_test {
     }
 
     it "should wait when queue is full" {
-        const NUMBER_OF_THREADS: usize = CAPACITY-2;
-        for _ in 0..CAPACITY-1 {
+        const NUMBER_OF_THREADS: usize = CAPACITY-1;
+        for _ in 0..CAPACITY {
             queue.enqueue(1);
         }
         let mut results = Vec::with_capacity(NUMBER_OF_THREADS);
@@ -178,7 +219,7 @@ describe! bounded_blocking_queue_test {
             let jh = thread::spawn(
                 move || {
                     data.enqueue(10);
-                    /*expect!(*/data.dequeue()/*).to(be_equal_to(1))*/;
+                    expect!(data.dequeue()).to(be_equal_to(1));
                 }
             );
             results.push(jh);
@@ -191,22 +232,18 @@ describe! bounded_blocking_queue_test {
             expect!(jh.join()).to(be_ok());
         }
 
-        expect!(queue.len()).to(be_equal_to(CAPACITY-2));
+        expect!(queue.len()).to(be_equal_to(CAPACITY-1));
     }
 }
 
 pub fn enqeue_times(times: i32, queue: &BlockingQueue<i32>) {
-    let size = queue.len();
-    for i in 1..times {
+    for i in 0..times {
         queue.enqueue(i);
-        expect!(queue.len()).to(be_equal_to(size + (i as usize)));
     }
 }
 
 pub fn dequeue_times(times: i32, queue: &BlockingQueue<i32>) {
-    let size = queue.len();
-    for i in 1..times {
+    for i in 0..times {
         queue.dequeue();
-        expect!(queue.len()).to(be_equal_to(size - (i as usize)));
     }
 }

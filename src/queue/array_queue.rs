@@ -19,7 +19,7 @@ fn next_node_index(index: usize, mask: usize) -> usize {
 struct ArrayBlockingQueueInner<T> {
     mutex: Mutex<()>,
     head: AtomicUsize,
-    tail: AtomicUsize,
+    size: AtomicUsize,
     data: RawVec<T>,
     empty: Condvar,
     full: Condvar
@@ -37,7 +37,7 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
         ArrayBlockingQueueInner {
             mutex: Mutex::new(()),
             head: AtomicUsize::new(0),
-            tail: AtomicUsize::new(0),
+            size: AtomicUsize::new(0),
             data: RawVec::with_capacity(capacity),
             empty: Condvar::new(),
             full: Condvar::new()
@@ -49,18 +49,23 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
     }
 
     fn size(&self) -> usize {
-        (self.capacity() - self.head() + self.tail()) & (self.capacity() - 1)
+        self.size.load(Ordering::Relaxed)
+    }
+
+    fn increase_size(&self) -> usize {
+        self.size.fetch_add(1, Ordering::Relaxed)
+    }
+
+    fn decrease_size(&self) -> usize {
+        self.size.fetch_sub(1, Ordering::Relaxed)
     }
 
     fn is_full(&self) -> bool {
-        self.size() == self.capacity() - 1
+        self.size() == self.capacity()
     }
 
-    fn remaning_capacity(&self) -> usize {
-        let guard = self.mutex.lock().unwrap();
-        let remaning_capacity = self.capacity() - self.size();
-        drop(guard);
-        remaning_capacity
+    fn is_empty(&self) -> bool {
+        self.size() == 0
     }
 
     fn head(&self) -> usize {
@@ -71,20 +76,14 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
         let head = self.head();
         let mask = self.capacity() - 1;
         let new_head = (head + 1) & mask;
-        self.head.store(new_head, Ordering::Relaxed);
-        head
+        self.head.swap(new_head, Ordering::Relaxed)
     }
 
-    fn tail(&self) -> usize {
-        self.tail.load(Ordering::Relaxed)
-    }
-
-    fn next_tail(&self) -> usize {
-        let tail = self.tail();
-        let mask = self.capacity() - 1;
-        let new_tail = (tail + 1) & mask;
-        self.tail.store(new_tail, Ordering::Relaxed);
-        tail
+    fn remaning_capacity(&self) -> usize {
+        let guard = self.mutex.lock().unwrap();
+        let remaning_capacity = self.capacity() - self.size();
+        drop(guard);
+        remaning_capacity
     }
 
     fn len(&self) -> usize {
@@ -94,17 +93,13 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
         len
     }
 
-    fn is_empty(&self) -> bool {
-        self.size() == 0
-    }
-
     fn enqueue(&self, val: T) {
         let mut guard = self.mutex.lock().unwrap();
         while self.is_full() {
             guard = self.full.wait(guard).unwrap();
         }
+        let index = self.next_free_index();
         unsafe {
-            let index = self.next_tail();
             let tail = self.data.ptr().offset(index as isize);
             ptr::write(tail, val);
         }
@@ -112,16 +107,22 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
         drop(guard);
     }
 
+    fn next_free_index(&self) -> usize {
+        let mask = self.capacity() - 1;
+        (self.head() + self.increase_size()) & mask
+    }
+
     fn dequeue(&self) -> T {
         let mut guard = self.mutex.lock().unwrap();
         while self.is_empty() {
             guard = self.empty.wait(guard).unwrap();
         }
+        let index = self.next_head();
         let val = unsafe {
-            let index = self.next_head();
             let head = self.data.ptr().offset(index as isize);
             ptr::read(head)
         };
+        self.decrease_size();
         self.full.notify_all();
         drop(guard);
         val
@@ -131,14 +132,15 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
         let guard = self.mutex.lock().unwrap();
         let mut next = self.head();
         let mut find = false;
-        let tail = self.tail();
+        let mask = self.capacity() - 1;
+        let tail = (self.head() + self.size()) & mask;
         while next != tail && !find {
             let v = unsafe {
                 let p = self.data.ptr().offset(next as isize);
                 ptr::read(p)
             };
             find = v == val;
-            next = next_node_index(next, self.capacity() - 1);
+            next = next_node_index(next, mask);
         }
         drop(guard);
         find
