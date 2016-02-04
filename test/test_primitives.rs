@@ -1,7 +1,5 @@
-extern crate concrust;
-
-pub use self::concrust::primitives::CountDownLatch;
-pub use self::concrust::primitives::Semaphore;
+pub use concrust::primitives::CountDownLatch;
+pub use concrust::primitives::Semaphore;
 
 pub use std::thread;
 pub use std::sync::Arc;
