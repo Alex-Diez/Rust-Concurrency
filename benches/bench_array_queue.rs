@@ -124,7 +124,7 @@ fn single_consumers_multiple_producer_large_queue_size(bencher: &mut test::Bench
 }
 
 fn single_consumers_multiple_producer_iter(queue: ArrayBlockingQueue<i64>, barrier: Arc<Barrier>, oper: i64) -> i64{
-    let c_handle = spawn_consumer(&queue, &barrier, NUMBER_OF_PROCCESS);
+    let c_handle = spawn_consumer(&queue, &barrier, NUMBER_OF_ELEMENTS);
     for _ in 0..NUMBER_OF_PROCCESS {
         spawn_producer(&queue, &barrier, oper);
     }
