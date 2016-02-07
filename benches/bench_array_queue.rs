@@ -1,5 +1,9 @@
 #![feature(test)]
+#![feature(custom_attribute)]
+#![feature(plugin)]
+//#![plugin(criterion_macros)]
 
+extern crate criterion;
 extern crate concrust;
 extern crate test;
 #[macro_use]
@@ -10,6 +14,8 @@ pub use concrust::queue::BlockingQueue;
 
 pub use expectest::prelude::{be_equal_to, be_ok};
 
+pub use criterion::Bencher;
+
 pub use std::thread;
 pub use std::thread::JoinHandle;
 pub use std::sync::{Arc, Barrier};
@@ -17,6 +23,102 @@ pub use std::result::Result;
 
 const NUMBER_OF_ELEMENTS: i64 = 1000;
 const NUMBER_OF_PROCCESS: i64 = 5;
+
+//#[criterion]
+fn sc_sp_setup(bencher: &mut Bencher) {
+    let expected_result = sum(NUMBER_OF_ELEMENTS);
+    let queue = ArrayBlockingQueue::with_capacity((NUMBER_OF_ELEMENTS / 2) as usize);
+    let barrier = Arc::new(Barrier::new(3));
+    let queue_cons = queue.clone();
+    let barrier_cons = barrier.clone();
+    let mut bencher_cons = bencher.clone();
+    let cons = thread::spawn(
+        move || {
+            barrier_cons.wait();
+            bencher_cons.iter(
+                || {
+                    let mut sum = 0;
+                    for _ in 0..NUMBER_OF_ELEMENTS {
+                        sum += queue_cons.dequeue();
+                    }
+                    expect!(sum).to(be_equal_to(expected_result))
+                }
+            );
+        }
+    );
+    let queue_prod = queue.clone();
+    let barrier_prod = barrier.clone();
+    let mut bencher_prod = bencher.clone();
+    let prod = thread::spawn(
+        move || {
+            barrier_prod.wait();
+            bencher_prod.iter(
+                || {
+                    for i in 0..NUMBER_OF_ELEMENTS {
+                        queue_prod.enqueue(i);
+                    }
+                }
+            );
+        }
+    );
+    barrier.wait();
+    cons.join();
+    prod.join();
+
+}
+
+#[bench]
+fn single_consumer_single_producer_default_queue_size(bencher: &mut test::Bencher) {
+    let expected_result = single_consumer_single_producer_setup();
+    bencher.iter(
+        || {
+            let actual_result = single_consumer_single_producer_iter(
+                ArrayBlockingQueue::new(),
+                Arc::new(Barrier::new(3))
+            );
+            expect!(actual_result).to(be_equal_to(expected_result));
+        }
+    );
+}
+
+#[bench]
+fn single_consumer_single_producer_small_queue_size(bencher: &mut test::Bencher) {
+    let expected_result = single_consumer_single_producer_setup();
+    bencher.iter(
+        || {
+            let actual_result = single_consumer_single_producer_iter(
+                ArrayBlockingQueue::with_capacity((NUMBER_OF_ELEMENTS / 20) as usize),
+                Arc::new(Barrier::new(3))
+            );
+            expect!(actual_result).to(be_equal_to(expected_result));
+        }
+    );
+}
+
+#[bench]
+fn single_consumer_single_producer_large_queue_size(bencher: &mut test::Bencher) {
+    let expected_result = single_consumer_single_producer_setup();
+    bencher.iter(
+        || {
+            let actual_result = single_consumer_single_producer_iter(
+                ArrayBlockingQueue::with_capacity((NUMBER_OF_ELEMENTS / 2) as usize),
+                Arc::new(Barrier::new(3))
+            );
+            expect!(actual_result).to(be_equal_to(expected_result));
+        }
+    );
+}
+
+fn single_consumer_single_producer_iter(queue: ArrayBlockingQueue<i64>, barrier: Arc<Barrier>) -> i64 {
+    let handle = spawn_consumer(&queue, &barrier, NUMBER_OF_ELEMENTS);
+    spawn_producer(&queue, &barrier, NUMBER_OF_ELEMENTS);
+    barrier.wait();
+    handle.join().unwrap()
+}
+
+fn single_consumer_single_producer_setup() -> i64 {
+    sum(NUMBER_OF_ELEMENTS)
+}
 
 #[bench]
 fn multiple_consumers_multiple_producer_default_queue_size(bencher: &mut test::Bencher) {
@@ -130,59 +232,6 @@ fn single_consumers_multiple_producer_iter(queue: ArrayBlockingQueue<i64>, barri
     }
     barrier.wait();
     c_handle.join().unwrap()
-}
-
-#[bench]
-fn single_consumer_single_producer_default_queue_size(bencher: &mut test::Bencher) {
-    let expected_result = single_consumer_single_producer_setup();
-    bencher.iter(
-        || {
-            let actual_result = single_consumer_single_producer_iter(
-                ArrayBlockingQueue::new(),
-                Arc::new(Barrier::new(3))
-            );
-            expect!(actual_result).to(be_equal_to(expected_result));
-        }
-    );
-}
-
-#[bench]
-fn single_consumer_single_producer_small_queue_size(bencher: &mut test::Bencher) {
-    let expected_result = single_consumer_single_producer_setup();
-    bencher.iter(
-        || {
-            let actual_result = single_consumer_single_producer_iter(
-                ArrayBlockingQueue::with_capacity((NUMBER_OF_ELEMENTS / 20) as usize),
-                Arc::new(Barrier::new(3))
-            );
-            expect!(actual_result).to(be_equal_to(expected_result));
-        }
-    );
-}
-
-#[bench]
-fn single_consumer_single_producer_large_queue_size(bencher: &mut test::Bencher) {
-    let expected_result = single_consumer_single_producer_setup();
-    bencher.iter(
-        || {
-            let actual_result = single_consumer_single_producer_iter(
-                ArrayBlockingQueue::with_capacity((NUMBER_OF_ELEMENTS / 2) as usize),
-                Arc::new(Barrier::new(3))
-            );
-            expect!(actual_result).to(be_equal_to(expected_result));
-        }
-    );
-}
-
-fn single_consumer_single_producer_iter(queue: ArrayBlockingQueue<i64>, barrier: Arc<Barrier>) -> i64 {
-    let handle = spawn_consumer(&queue, &barrier, NUMBER_OF_ELEMENTS);
-    spawn_producer(&queue, &barrier, NUMBER_OF_ELEMENTS);
-    barrier.wait();
-    handle.join().unwrap()
-}
-
-fn single_consumer_single_producer_setup() -> i64 {
-    sum(NUMBER_OF_ELEMENTS)
 }
 
 pub fn sum(last: i64) -> i64 {

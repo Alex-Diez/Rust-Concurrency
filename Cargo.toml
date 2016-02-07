@@ -15,10 +15,15 @@ path = "src/lib.rs"
 name = "test"
 path = "test/lib.rs"
 
-[dependencies.stainless]
+[dependencies]
+clippy = "0.0.37"
+
+[dev-dependencies.stainless]
 git = "https://github.com/Alex-Diez/stainless.git"
 branch = "ignore_tests"
 
-[dependencies]
-clippy = "0.0.37"
+[dev-dependencies.criterion]
+git = "https://github.com/japaric/criterion.rs.git"
+
+[dev-dependencies]
 expectest = "0.4.1"
