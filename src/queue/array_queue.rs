@@ -25,7 +25,7 @@ struct ArrayBlockingQueueInner<T> {
     full: Condvar
 }
 
-impl <T: PartialEq> ArrayBlockingQueueInner<T> {
+impl <T> ArrayBlockingQueueInner<T> {
 
     fn with_capacity(capacity: usize) -> ArrayBlockingQueueInner<T> {
         let capacity = if capacity < MIN_CAPACITY {
@@ -128,24 +128,6 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
         val
     }
 
-    fn contains(&self, val: T) -> bool {
-        let guard = self.mutex.lock().unwrap();
-        let mut next = self.head();
-        let mut find = false;
-        let mask = self.capacity() - 1;
-        let tail = (self.head() + self.size()) & mask;
-        while next != tail && !find {
-            let v = unsafe {
-                let p = self.data.ptr().offset(next as isize);
-                ptr::read(p)
-            };
-            find = v == val;
-            next = next_node_index(next, mask);
-        }
-        drop(guard);
-        find
-    }
-
     fn offer(&self, val: T) -> bool {
         if !self.is_full() {
             self.enqueue(val);
@@ -167,6 +149,27 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
         };
         drop(guard);
         result
+    }
+}
+
+impl <T: PartialEq> ArrayBlockingQueueInner<T> {
+
+    fn contains(&self, val: T) -> bool {
+        let guard = self.mutex.lock().unwrap();
+        let mut next = self.head();
+        let mut find = false;
+        let mask = self.capacity() - 1;
+        let tail = (self.head() + self.size()) & mask;
+        while next != tail && !find {
+            let v = unsafe {
+                let p = self.data.ptr().offset(next as isize);
+                ptr::read(p)
+            };
+            find = v == val;
+            next = next_node_index(next, mask);
+        }
+        drop(guard);
+        find
     }
 }
 
@@ -200,7 +203,7 @@ impl <T: PartialEq> ArrayBlockingQueue<T> {
     }
 }
 
-impl <T: PartialEq> BlockingQueue<T> for ArrayBlockingQueue<T> {
+impl <T> BlockingQueue<T> for ArrayBlockingQueue<T> {
 
     /// Return size of current queue
     fn len(&self) -> usize {
@@ -224,11 +227,6 @@ impl <T: PartialEq> BlockingQueue<T> for ArrayBlockingQueue<T> {
         self.inner.dequeue()
     }
 
-    /// Check if current queue contains specified value
-    fn contains(&self, val: T) -> bool {
-        self.inner.contains(val)
-    }
-
     /// Offer value into queue
     /// If queue is not full return true otherwise false
     /// Notify threads which blocked on dequeue operation
@@ -239,5 +237,13 @@ impl <T: PartialEq> BlockingQueue<T> for ArrayBlockingQueue<T> {
     /// Peek queue head value without removing it from queue
     fn peek(&self) -> Option<T> {
         self.inner.peek()
+    }
+}
+
+impl <T:PartialEq> ArrayBlockingQueue<T> {
+
+    /// Check if current queue contains specified value
+    pub fn contains(&self, val: T) -> bool {
+        self.inner.contains(val)
     }
 }
