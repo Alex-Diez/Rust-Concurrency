@@ -22,8 +22,8 @@ clippy = "0.0.37"
 git = "https://github.com/Alex-Diez/stainless.git"
 branch = "ignore_tests"
 
-#[dev-dependencies.criterion]
-#git = "https://github.com/japaric/criterion.rs.git"
+[dev-dependencies.criterion]
+git = "https://github.com/japaric/criterion.rs.git"
 
 [dev-dependencies]
 expectest = "0.4.1"
