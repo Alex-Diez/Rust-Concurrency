@@ -79,11 +79,11 @@ impl <T: PartialEq> ArrayBlockingQueueInner<T> {
         self.head.swap(new_head, Ordering::Relaxed)
     }
 
-    fn remaning_capacity(&self) -> usize {
+    fn remaining_capacity(&self) -> usize {
         let guard = self.mutex.lock().unwrap();
-        let remaning_capacity = self.capacity() - self.size();
+        let remaining_capacity = self.capacity() - self.size();
         drop(guard);
-        remaning_capacity
+        remaining_capacity
     }
 
     fn len(&self) -> usize {
@@ -194,15 +194,15 @@ impl <T: PartialEq> ArrayBlockingQueue<T> {
         }
     }
 
-    /// Retrun remaning capacity for current queue
-    pub fn remaning_capacity(&self) -> usize {
-        self.inner.remaning_capacity()
+    /// Return remaining capacity for current queue
+    pub fn remaining_capacity(&self) -> usize {
+        self.inner.remaining_capacity()
     }
 }
 
 impl <T: PartialEq> BlockingQueue<T> for ArrayBlockingQueue<T> {
 
-    /// Retrun size of current queue
+    /// Return size of current queue
     fn len(&self) -> usize {
         self.inner.len()
     }

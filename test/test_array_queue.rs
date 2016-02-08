@@ -19,7 +19,7 @@ describe! bounded_blocking_queue_test {
 
     it "should create a new queue with default capacity" {
         let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::new();
-        expect!(queue.remaning_capacity()).to(be_equal_to(16));
+        expect!(queue.remaining_capacity()).to(be_equal_to(16));
     }
 
     it "should create a new empty queue" {
@@ -29,18 +29,18 @@ describe! bounded_blocking_queue_test {
 
     it "should have capacity that is always highest power of two" {
         let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(10);
-        expect!(queue.remaning_capacity()).to(be_equal_to(16));
+        expect!(queue.remaining_capacity()).to(be_equal_to(16));
 
         let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(20);
-        expect!(queue.remaning_capacity()).to(be_equal_to(32));
+        expect!(queue.remaining_capacity()).to(be_equal_to(32));
 
         let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(40);
-        expect!(queue.remaning_capacity()).to(be_equal_to(64));
+        expect!(queue.remaining_capacity()).to(be_equal_to(64));
     }
 
     it "should not have less then min capacity" {
         let queue: ArrayBlockingQueue<i32> = ArrayBlockingQueue::with_capacity(6);
-        expect!(queue.remaning_capacity()).to(be_equal_to(16));
+        expect!(queue.remaining_capacity()).to(be_equal_to(16));
     }
 
     it "should increase size when insert into queue" {
