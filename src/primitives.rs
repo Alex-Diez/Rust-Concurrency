@@ -44,11 +44,11 @@ impl LatchInner {
     }
 }
 
-/// A synchronization aid that allows one or more threads to wait until a set 
+/// A synchronization aid that allows one or more threads to wait until a set
 /// of operations being performed in other threads completes.
-/// A CountDownLatch is initialized with a given count. The await methods block 
-/// until the current count reaches zero due to invocations of the count_down() 
-/// method, after which all waiting threads are released and any subsequent 
+/// A `CountDownLatch` is initialized with a given count. The await methods block
+/// until the current count reaches zero due to invocations of the `count_down()`
+/// method, after which all waiting threads are released and any subsequent
 /// invocations of await return immediately. This is a one-shot phenomenon --
 /// the count cannot be reset.
 #[derive(Clone)]

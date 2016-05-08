@@ -1,4 +1,3 @@
-use std::mem;
 use std::ptr;
 
 use std::boxed::Box;
@@ -55,14 +54,14 @@ impl <T> Deref for Link<T> {
     type Target = Node<T>;
 
     fn deref(&self) -> &Node<T> {
-        unsafe { mem::transmute(self.ptr) }
+        unsafe { &*self.ptr }
     }
 }
 
 impl <T> DerefMut for Link<T> {
 
     fn deref_mut(&mut self) -> &mut Node<T> {
-        unsafe { mem::transmute(self.ptr) }
+        unsafe { &mut *self.ptr }
     }
 }
 

@@ -1,4 +1,3 @@
-use std::mem;
 use std::ptr;
 
 use std::marker::Copy;
@@ -64,14 +63,14 @@ impl Deref for Link {
     type Target = Bucket;
 
     fn deref(&self) -> &Bucket {
-        unsafe { mem::transmute(self.ptr) }
+        unsafe { &*self.ptr }
     }
 }
 
 impl DerefMut for Link {
 
     fn deref_mut(&mut self) -> &mut Bucket {
-        unsafe { mem::transmute(self.ptr) }
+        unsafe { &mut *self.ptr }
     }
 }
 
@@ -92,6 +91,13 @@ unsafe impl Send for Link { }
 pub struct ConcurrentHashMap {
     table: Vec<RwLock<Link>>,
     size: AtomicUsize
+}
+
+impl Default for ConcurrentHashMap {
+
+    fn default() -> ConcurrentHashMap {
+        ConcurrentHashMap::new()
+    }
 }
 
 impl ConcurrentHashMap {
